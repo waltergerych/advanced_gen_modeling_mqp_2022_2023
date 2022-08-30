@@ -152,6 +152,7 @@ problem in high-dimensional non-convex optimization": https://ganguli-gang.stanf
 
 *Week 1*
 
+- Email GitHub username of each student to graduate mentor (wgerych@wpi.edu) 
 - Set up Python on each of your machines
 - Install PyTorch
 - Each student should do the "PyTorch 60 Minute Blitz" tutorial (under **Tutorials**)
