@@ -56,7 +56,7 @@ Further, we want you to demonstrate:
 - Advisor meetings
     - A term: 3pm every Tuesday in Unity Hall 344
 - Mentor meetings
-    - A term: 10am every Thursday (Location TBD) 
+    - A term: TBD
 
 ### Resources 
 
