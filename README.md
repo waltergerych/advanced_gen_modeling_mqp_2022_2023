@@ -95,6 +95,11 @@ Minimax Problems": https://arxiv.org/pdf/1906.00331.pdf
 problem in high-dimensional non-convex optimization": https://ganguli-gang.stanford.edu/pdf/14.SaddlePoint.NIPS.pdf
 - Multi-Agent Diverse GANs: Arnab Ghosh, Viveka Kulharia, Vinay P. Namboodiri, Philip H.S. Torr, Puneet K. Dokania; Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2018, pp. 8513-8521 https://openaccess.thecvf.com/content_cvpr_2018/html/Ghosh_Multi-Agent_Diverse_Generative_CVPR_2018_paper.html
 
+*Human Activity Recognition Papers*
+
+- Vaizman, Yonatan, et al. "Context recognition in-the-wild: Unified model for multi-modal sensors and multi-label classification.": http://extrasensory.ucsd.edu/papers/vaizman2017b_imwutAcceptedVersion.pdf
+- Jobanputra, Charmi, et al. "Human activity recognition: A survey.": https://reader.elsevier.com/reader/sd/pii/S1877050919310166?token=FDA56C10097234B41943474778C65C78108DB301165F04C9CCA19BC5CA757E0D9C0CEEBA0D7E946320D440BC651FF7D9&originRegion=us-east-1&originCreation=20220830161458
+
 **Relevant blog posts**
 
 **Relevant videos** 
@@ -129,6 +134,7 @@ problem in high-dimensional non-convex optimization": https://ganguli-gang.stanf
 
 **Code Resources**
 - PyTorch implementations of many types of GANs: https://cvnote.ddlee.cc/2019/09/25/gans-pytorch
+- Another repo for GANs: https://github.com/w86763777/pytorch-gan-collections
 
 ------------------------------------------
 
