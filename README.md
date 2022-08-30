@@ -62,7 +62,9 @@ Further, we want you to demonstrate:
 Below you will find links to various resources that may aid in your MQP. We will periodically update this as the MQP progresses. 
 
 **Relevant papers**
+
 *GAN Papers*
+
 - Original GAN paper: https://arxiv.org/pdf/1406.2661.pdf
     - See videos on GANs in videos section prior to reading
 - Conditional GAN: Mirza, Mehdi, and Simon Osindero. "Conditional generative adversarial nets.": https://arxiv.org/pdf/1411.1784.pdf
