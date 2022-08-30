@@ -32,7 +32,7 @@ This is your MQP and provides an opportunity to show off your skills. Whether yo
     - Include setup (don’t assume we remember!), what you did, and what you plan to do
     - Always include your conclusions and/or proposed next steps as appropriate
     - Complete slides and include written summary if unavailable to meet
-    - **Send draft of advisor slides 1 to mentor 1 day early**
+    - **Send draft of advisor slides to mentor 1 day early**
 -	Weekly meeting notes
 -	Final presentation in D-term (poster or video as announced by the departments)
 -	Term personal and team evaluations
