@@ -1,4 +1,4 @@
-## ``Dirty Machine Learning" MQP
+## ``Advanced Applications of Deep Generative Models" MQP
 
 **Advisor**: Elke Rundensteiner, **Mentor**: Walter Gerych
 
@@ -101,6 +101,8 @@ problem in high-dimensional non-convex optimization": https://ganguli-gang.stanf
 - Jobanputra, Charmi, et al. "Human activity recognition: A survey.": https://reader.elsevier.com/reader/sd/pii/S1877050919310166?token=FDA56C10097234B41943474778C65C78108DB301165F04C9CCA19BC5CA757E0D9C0CEEBA0D7E946320D440BC651FF7D9&originRegion=us-east-1&originCreation=20220830161458
 
 **Relevant blog posts**
+- Jason Brownlee, "Deep Learning Models for Human Activity Recognition": https://machinelearningmastery.com/deep-learning-models-for-human-activity-recognition/
+- Jason Brownlee, "A Gentle Introduction to a Standard Human Activity Recognition Problem": https://machinelearningmastery.com/how-to-load-and-explore-a-standard-human-activity-recognition-problem/
 
 **Relevant videos** 
 - Basics of machine learning: https://www.youtube.com/watch?v=ukzFI9rgwfU
@@ -135,6 +137,10 @@ problem in high-dimensional non-convex optimization": https://ganguli-gang.stanf
 **Code Resources**
 - PyTorch implementations of many types of GANs: https://cvnote.ddlee.cc/2019/09/25/gans-pytorch
 - Another repo for GANs: https://github.com/w86763777/pytorch-gan-collections
+
+**Datasets**
+- ExtraSensory Dataset (in-the-wild HAR dataset): http://extrasensory.ucsd.edu/
+- Scripted HAR Dataset: https://archive.ics.uci.edu/ml/datasets/human+activity+recognition+using+smartphones 
 
 ------------------------------------------
 
