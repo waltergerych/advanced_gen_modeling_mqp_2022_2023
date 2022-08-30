@@ -3,7 +3,7 @@
 **Advisor**: Elke Rundensteiner (rundenst@wpi.edu), **Graduate Mentors**: Walter Gerych (wgerych@wpi.edu), Joshua DeOliveira
 (jcdeoliveira@wpi.edu)
 
-Incomplete, messy data is ubiquitous in real-world applications. The focus of this MQP is on generative methods to combat this issue and “fill in” incomplete data. Specifically, we will be focusing on developing novel training strategies for generative models in order to achieve this task. 
+Incomplete, messy data is ubiquitous in real-world applications. The focus of this MQP is on generative methods to combat this issue and “fill in” incomplete data. Specifically, we will be focusing on the use of generative modeling to mitigate these issues in the Human Activity Recognition (HAR) domain. 
 
 This is your MQP and provides an opportunity to show off your skills. Whether your goal is industry or academia, the MQP is useful for applications. The Advisor and Mentor serve as guides during the MQP. While we will provide support and a general direction, we want all of you to bring your own ideas and seek out new directions. 
 
