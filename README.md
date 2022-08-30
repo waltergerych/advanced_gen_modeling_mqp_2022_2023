@@ -1,6 +1,7 @@
 ## ``Advanced Applications of Deep Generative Models" MQP
 
-**Advisor**: Elke Rundensteiner, **Mentor**: Walter Gerych
+**Advisor**: Elke Rundensteiner (rundenst@wpi.edu), **Graduate Mentors**: Walter Gerych (wgerych@wpi.edu), Joshua DeOliveira
+(jcdeoliveira@wpi.edu)
 
 Incomplete, messy data is ubiquitous in real-world applications. The focus of this MQP is on generative methods to combat this issue and “fill in” incomplete data. Specifically, we will be focusing on developing novel training strategies for generative models in order to achieve this task. 
 
