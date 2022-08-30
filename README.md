@@ -6,7 +6,7 @@ Incomplete, messy data is ubiquitous in real-world applications. The focus of th
 
 This is your MQP and provides an opportunity to show off your skills. Whether your goal is industry or academia, the MQP is useful for applications. The Advisor and Mentor serve as guides during the MQP. While we will provide support and a general direction, we want all of you to bring your own ideas and seek out new directions. 
 
-**Acknowledgments**: This page borrows heavily from resource created by ML Tlachac. 
+**Acknowledgments**: This page borrows heavily from resource created by Prof. Tlachac. 
 
 ------------------------------------------
 
