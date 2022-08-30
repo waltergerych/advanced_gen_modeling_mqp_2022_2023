@@ -53,52 +53,13 @@ Further, we want you to demonstrate:
 ### Important dates
 
 - Advisor meetings
-    - A term: 9am every Tuesday in Beckett conference room
+    - A term: 3pm every Tuesday in Unity Hall 344
 - Mentor meetings
-    - A term: 9am every Thursday in DS Innovation Lab (AK 013) 
+    - A term: 10am every Thursday (Location TBD) 
 
 ### Resources 
 
 Below you will find links to various resources that may aid in your MQP. We will periodically update this as the MQP progresses. 
-
-**Relevant papers**
-
-*GAN Papers*
-
-- Original GAN paper: https://arxiv.org/pdf/1406.2661.pdf
-    - See videos on GANs in videos section prior to reading
-- Conditional GAN: Mirza, Mehdi, and Simon Osindero. "Conditional generative adversarial nets.": https://arxiv.org/pdf/1411.1784.pdf
-    - Generating data with specific properties 
-- Controllable GANs:  Lee, Minhyeok, and Junhee Seok. "Controllable generative adversarial network.": https://arxiv.org/pdf/1708.00598.pdf
-    - An improvement over conditional GANs
-- Shoshan, Alon, et al. "GAN-Control: Explicitly Controllable GANs.": https://arxiv.org/pdf/2101.02477.pdf
-    - Another controllable GAN paper
-- Geometric GAN: Lim, Jae Hyun, et al. "Geometric GAN": https://arxiv.org/pdf/1705.02894.pdf
-    - A loss function based off of SVM properties
-- Invertible Conditional GANs for image editing: Guim Perarnau, Joost van de Weijer, Bogdan Raducanu, and Jose M. Álvarez. https://arxiv.org/pdf/1611.06355.pdf
-    - Allows the reconstruction and modifications of real face images conditioning on arbitrary attributes
-- Literature Compilation and Review: Mescheder, Lars, et al. "Which Training Methods for GANs do actually Converge?": https://arxiv.org/pdf/1801.04406.pdf
-    - Review of loss functions / training methods published in previous GAN research (2018 and earlier) 
-- Tseng, P. "Convergence of a Block Coordinate Descent
-Method for Nondifferentiable Minimization": https://link.springer.com/content/pdf/10.1023/A:1017501703105.pdf
-    - Heavily cited paper of properties about gradient descent. 
-- Bohm, Axel, et. al. "Two steps at a time — taking GAN training in stride
-with Tseng’s method": https://arxiv.org/pdf/2006.09033v1.pdf
-    - Quantifying the convergence of GAN training methods under specfic conditions.
-- Jayagopal, Tarun Narain (2021) VICE-GAN: Video Identity-Consistent Emotion Generative Adversarial Network.: http://essay.utwente.nl/88376/1/Jayagopal_MA_EEMCS.pdf
-- Progressive Growing GANs: https://arxiv.org/abs/1710.10196
-    - Stable training of image-generating GANs by steadily increasing the sizes of the images generated
-- Lin, Tianyi, et al. "On Gradient Descent Ascent for Nonconvex-Concave
-Minimax Problems": https://arxiv.org/pdf/1906.00331.pdf
-    - Proof based convergence Analysis
-- Dauphin, Yann, et al. "Identifying and attacking the saddle point
-problem in high-dimensional non-convex optimization": https://ganguli-gang.stanford.edu/pdf/14.SaddlePoint.NIPS.pdf
-- Multi-Agent Diverse GANs: Arnab Ghosh, Viveka Kulharia, Vinay P. Namboodiri, Philip H.S. Torr, Puneet K. Dokania; Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2018, pp. 8513-8521 https://openaccess.thecvf.com/content_cvpr_2018/html/Ghosh_Multi-Agent_Diverse_Generative_CVPR_2018_paper.html
-
-*Human Activity Recognition Papers*
-
-- Vaizman, Yonatan, et al. "Context recognition in-the-wild: Unified model for multi-modal sensors and multi-label classification.": http://extrasensory.ucsd.edu/papers/vaizman2017b_imwutAcceptedVersion.pdf
-- Jobanputra, Charmi, et al. "Human activity recognition: A survey.": https://reader.elsevier.com/reader/sd/pii/S1877050919310166?token=FDA56C10097234B41943474778C65C78108DB301165F04C9CCA19BC5CA757E0D9C0CEEBA0D7E946320D440BC651FF7D9&originRegion=us-east-1&originCreation=20220830161458
 
 **Relevant blog posts**
 - Jason Brownlee, "Deep Learning Models for Human Activity Recognition": https://machinelearningmastery.com/deep-learning-models-for-human-activity-recognition/
@@ -146,8 +107,57 @@ problem in high-dimensional non-convex optimization": https://ganguli-gang.stanf
 - ExtraSensory Dataset (in-the-wild HAR dataset): http://extrasensory.ucsd.edu/
 - Scripted HAR Dataset: https://archive.ics.uci.edu/ml/datasets/human+activity+recognition+using+smartphones 
 
+**Relevant papers**
+
+*GAN Papers*
+
+- Original GAN paper: https://arxiv.org/pdf/1406.2661.pdf
+    - See videos on GANs in videos section prior to reading
+- Conditional GAN: Mirza, Mehdi, and Simon Osindero. "Conditional generative adversarial nets.": https://arxiv.org/pdf/1411.1784.pdf
+    - Generating data with specific properties 
+- Controllable GANs:  Lee, Minhyeok, and Junhee Seok. "Controllable generative adversarial network.": https://arxiv.org/pdf/1708.00598.pdf
+    - An improvement over conditional GANs
+- Shoshan, Alon, et al. "GAN-Control: Explicitly Controllable GANs.": https://arxiv.org/pdf/2101.02477.pdf
+    - Another controllable GAN paper
+- Geometric GAN: Lim, Jae Hyun, et al. "Geometric GAN": https://arxiv.org/pdf/1705.02894.pdf
+    - A loss function based off of SVM properties
+- Invertible Conditional GANs for image editing: Guim Perarnau, Joost van de Weijer, Bogdan Raducanu, and Jose M. Álvarez. https://arxiv.org/pdf/1611.06355.pdf
+    - Allows the reconstruction and modifications of real face images conditioning on arbitrary attributes
+- Literature Compilation and Review: Mescheder, Lars, et al. "Which Training Methods for GANs do actually Converge?": https://arxiv.org/pdf/1801.04406.pdf
+    - Review of loss functions / training methods published in previous GAN research (2018 and earlier) 
+- Tseng, P. "Convergence of a Block Coordinate Descent
+Method for Nondifferentiable Minimization": https://link.springer.com/content/pdf/10.1023/A:1017501703105.pdf
+    - Heavily cited paper of properties about gradient descent. 
+- Bohm, Axel, et. al. "Two steps at a time — taking GAN training in stride
+with Tseng’s method": https://arxiv.org/pdf/2006.09033v1.pdf
+    - Quantifying the convergence of GAN training methods under specfic conditions.
+- Jayagopal, Tarun Narain (2021) VICE-GAN: Video Identity-Consistent Emotion Generative Adversarial Network.: http://essay.utwente.nl/88376/1/Jayagopal_MA_EEMCS.pdf
+- Progressive Growing GANs: https://arxiv.org/abs/1710.10196
+    - Stable training of image-generating GANs by steadily increasing the sizes of the images generated
+- Lin, Tianyi, et al. "On Gradient Descent Ascent for Nonconvex-Concave
+Minimax Problems": https://arxiv.org/pdf/1906.00331.pdf
+    - Proof based convergence Analysis
+- Dauphin, Yann, et al. "Identifying and attacking the saddle point
+problem in high-dimensional non-convex optimization": https://ganguli-gang.stanford.edu/pdf/14.SaddlePoint.NIPS.pdf
+- Multi-Agent Diverse GANs: Arnab Ghosh, Viveka Kulharia, Vinay P. Namboodiri, Philip H.S. Torr, Puneet K. Dokania; Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2018, pp. 8513-8521 https://openaccess.thecvf.com/content_cvpr_2018/html/Ghosh_Multi-Agent_Diverse_Generative_CVPR_2018_paper.html
+
+*Human Activity Recognition Papers*
+
+- Vaizman, Yonatan, et al. "Context recognition in-the-wild: Unified model for multi-modal sensors and multi-label classification.": http://extrasensory.ucsd.edu/papers/vaizman2017b_imwutAcceptedVersion.pdf
+- Jobanputra, Charmi, et al. "Human activity recognition: A survey.": https://reader.elsevier.com/reader/sd/pii/S1877050919310166?token=FDA56C10097234B41943474778C65C78108DB301165F04C9CCA19BC5CA757E0D9C0CEEBA0D7E946320D440BC651FF7D9&originRegion=us-east-1&originCreation=20220830161458
+
 ------------------------------------------
 
 ### Tasks
-Below we will lists tasks. Every student that should perform the task will have their name as a sub bullet under the task. Students should ~~strikethrough~~ their names after they have completed the task. Students are expected to add to this list of tasks themselves. 
+
+*Week 1*
+
+- Set up Python on each of your machines
+- Install PyTorch
+- Each student should do the "PyTorch 60 Minute Blitz" tutorial (under **Tutorials**)
+- Download the UCI Machine Learning Repo HAR dataset (under **Datasets**)
+- Each student should implelment and a simple feed forward network in PyTorch to classify some set of activities in the HAR dataset
+- Students should work togehter to come up with a unified solution combinign best of their individual implementations
+- Submit each individual solution + master solution to graduate mentor
+- Put together presentation explaining solution; present to mentor 
 
