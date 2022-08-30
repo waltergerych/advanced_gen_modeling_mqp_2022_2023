@@ -88,6 +88,7 @@ Below you will find links to various resources that may aid in your MQP. We will
 - Building simple GAN in PyTorch
      - https://towardsdatascience.com/build-a-super-simple-gan-in-pytorch-54ba349920e4
 - Building a conditional GAN in PyTorch: https://machinelearningmastery.com/how-to-develop-a-conditional-generative-adversarial-network-from-scratch/
+- PyTorch 60 Minute Blitz: https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html
 
 **Tools** 
 - Anaconda: https://www.anaconda.com/
