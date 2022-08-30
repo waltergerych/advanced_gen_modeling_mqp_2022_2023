@@ -103,6 +103,10 @@ problem in high-dimensional non-convex optimization": https://ganguli-gang.stanf
 **Relevant blog posts**
 - Jason Brownlee, "Deep Learning Models for Human Activity Recognition": https://machinelearningmastery.com/deep-learning-models-for-human-activity-recognition/
 - Jason Brownlee, "A Gentle Introduction to a Standard Human Activity Recognition Problem": https://machinelearningmastery.com/how-to-load-and-explore-a-standard-human-activity-recognition-problem/
+- Sylvain Combettes, "A basic intro to GANs (Generative Adversarial Networks)": https://towardsdatascience.com/a-basic-intro-to-gans-generative-adversarial-networks-c62acbcefff3
+- Chapter 8. Conditional GAN: https://livebook.manning.com/book/gans-in-action/chapter-8/
+- Bharath K, "Implementing Conditional Generative Adversarial Networks": https://blog.paperspace.com/conditional-generative-adversarial-networks/
+    - This implementation is in Keras; read for theory not implementation 
 
 **Relevant videos** 
 - Basics of machine learning: https://www.youtube.com/watch?v=ukzFI9rgwfU
