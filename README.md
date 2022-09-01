@@ -164,4 +164,10 @@ problem in high-dimensional non-convex optimization": https://ganguli-gang.stanf
 - Students should work togehter to come up with a unified solution combinign best of their individual implementations
 - Submit each individual solution + master solution to graduate mentor
 - Put together presentation explaining solution; present to mentor 
+- Look at the following videos:
+    - Basics of GANs: https://www.youtube.com/watch?v=-Upj_VhjTBs
+    - Overview of original GAN paper
+        - https://www.youtube.com/watch?v=8L11aMN5KY8
+        - https://www.youtube.com/watch?v=Gib_kiXgnvA
+
 
