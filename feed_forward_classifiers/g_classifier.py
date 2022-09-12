@@ -66,7 +66,7 @@ def load_data(dataset, dataset_type):
 
 def fPC(model, data, labels):
     """
-    Measure of percent collect of the current model
+    Measure of percent correct of the current model
 
     @param: data: torch.Tensor, labels: torch.Tensor
     @return: None
