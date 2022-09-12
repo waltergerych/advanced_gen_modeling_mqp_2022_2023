@@ -91,7 +91,7 @@ def train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_siz
     @param: model: FF, optimizer: torch.optim, criterion: torch.nn.modules.loss
     @return: None
     """
-    # loop through the dataset multiple epochs
+    # loop through the dataset multiple times
     for e in range(epochs):
         # keep track of current loss for statistics
         curr_loss = 0.0
