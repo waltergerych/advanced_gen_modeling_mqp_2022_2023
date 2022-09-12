@@ -98,7 +98,7 @@ def fPC(model, data, labels, class_stats=False):
             class_acc = (correct_predictions / total_predictions) * 100
             # print out the class accuracies
             for i in range(len(classes)):
-                print(f"Class {classes[i]}:\t{class_acc[i]}")
+                print(f"Class {classes[i]}:\t{class_acc[i]}%")
 
     return percent_correct
 
