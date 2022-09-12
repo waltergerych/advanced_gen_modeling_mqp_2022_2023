@@ -69,7 +69,7 @@ def fPC(model, data, labels, class_stats=False):
     Measure of percent correct of the current model
 
     @param: data: torch.Tensor, labels: torch.Tensor
-    @return: None
+    @return: percent_correct: float
     """
     # initialize class predictions statistics
     classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
