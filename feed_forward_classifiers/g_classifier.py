@@ -64,13 +64,19 @@ def load_data(dataset, dataset_type):
     return data, labels
 
 
-def fPC(model, data, labels):
+def fPC(model, data, labels, class_stats=False):
     """
     Measure of percent correct of the current model
 
     @param: data: torch.Tensor, labels: torch.Tensor
     @return: None
     """
+    # initialize class predictions statistics
+    classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
+    correct_predictions = np.array([0, 0, 0, 0, 0, 0])
+    total_predictions = np.array([0, 0, 0, 0, 0, 0])
+
+    # run model without gradient calculation for better performance
     with torch.no_grad():
         # run the data through the model
         outputs = model(data)
@@ -80,6 +86,19 @@ def fPC(model, data, labels):
         correct = (predicted == labels).sum().item()
         # calculate the percent correct
         percent_correct = correct / labels.size(0)
+
+        # if class statistics flag is set, calculate the accuracy for each class
+        if class_stats:
+            # for each truth-guess pair, increment the correct/total predictions
+            for truth, guess in zip(labels, predicted):
+                correct_predictions[truth] += 1 if truth == guess else 0
+                total_predictions[truth] += 1
+
+            # calculate the class accuracies
+            class_acc = (correct_predictions / total_predictions) * 100
+            # print out the class accuracies
+            for i in range(len(classes)):
+                print(f"Class {classes[i]}:\t{class_acc[i]}")
 
     return percent_correct
 
@@ -91,10 +110,12 @@ def train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_siz
     @param: model: FF, optimizer: torch.optim, criterion: torch.nn.modules.loss
     @return: None
     """
+    # keep track of current loss and accuracy for statistics
+    curr_loss = 0.0
+    curr_acc = 0.0
+
     # loop through the dataset multiple times
     for e in range(epochs):
-        # keep track of current loss for statistics
-        curr_loss = 0.0
 
         # randomize the samples
         rand_idx = np.random.permutation(train_x.size(0))
@@ -119,10 +140,13 @@ def train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_siz
 
             # print statistics
             curr_loss = loss.item()
+            curr_acc = fPC(model, batch_x, batch_y)
 
         # print statistics every 5 epochs
         if show_loss and (e % 5 == 0):
-            print(f"Epoch {e+5}, current loss: {curr_loss}")
+            print(f"Epoch {e+5}\n" \
+                  f"    current loss:\t{curr_loss}\n"\
+                  f"    current accuracy:\t{curr_acc}%")
 
 
 def test_model(model, test_x, test_y):
@@ -133,10 +157,10 @@ def test_model(model, test_x, test_y):
     @return: None
     """
     # get the accuracy of the model on the testing set
-    percent_correct = fPC(model, test_x, test_y)
+    percent_correct = fPC(model, test_x, test_y, class_stats=True)
 
     # print out the accuracy
-    print(f'Accuracy of the model on testing set: {percent_correct * 100} %')
+    print(f'Accuracy of the model on testing set: {percent_correct * 100}%')
 
 
 def main():
@@ -149,24 +173,26 @@ def main():
 
     # initialize hyperparameters
     hidden_size = 512
-    epochs = 200
-    batch_size = 150
+    epochs = 100
+    batch_size = 100
     learning_rate = 0.005
-    momentum = 0.9
+    momentum = 0.5
 
     # initialize the model and optimizer with cross entropy loss function
-    model = FF(561, hidden_size)
+    model = FF(train_x.size(1), hidden_size)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
 
     # train the model
     train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_size, show_loss=True)
 
-    # test the model
-    test_model(model, test_x, test_y)
-
     # save the model
     # torch.save(model.state_dict(), './g_model.pth')
+    # model = FF(train_x.size(1), hidden_size)
+    # model.load_state_dict(torch.load('./g_model.pth'))
+
+    # test the model
+    test_model(model, test_x, test_y)
 
 
 if __name__ == "__main__":
