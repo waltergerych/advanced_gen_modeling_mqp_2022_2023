@@ -26,6 +26,7 @@ class FF(nn.Module):
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(hidden_size, 6)
+        self.softmax = nn.Softmax(dim=1)
 
 
     def forward(self, data):
@@ -38,6 +39,7 @@ class FF(nn.Module):
         data = self.fc1(data)
         data = self.relu(data)
         data = self.fc2(data)
+        data = self.softmax(data)
         return data
 
 
@@ -85,7 +87,7 @@ def fPC(model, data, labels, class_stats=False):
         # get the number of correct guesses
         correct = (predicted == labels).sum().item()
         # calculate the percent correct
-        percent_correct = correct / labels.size(0)
+        percent_correct = (correct / labels.size(0)) * 100
 
         # if class statistics flag is set, calculate the accuracy for each class
         if class_stats:
@@ -160,7 +162,7 @@ def test_model(model, test_x, test_y):
     percent_correct = fPC(model, test_x, test_y, class_stats=True)
 
     # print out the accuracy
-    print(f'Accuracy of the model on testing set: {percent_correct * 100}%')
+    print(f'Accuracy of the model on testing set: {percent_correct}%')
 
 
 def main():
