@@ -86,7 +86,7 @@ def fPC(model, data, labels, class_stats=False):
         # get the number of correct guesses
         correct = (predicted == labels).sum().item()
         # calculate the percent correct
-        percent_correct = (correct / labels.size(0)) * 100
+        percent_correct = (correct / labels.size(0))
 
         # if class statistics flag is set, calculate the accuracy for each class
         if class_stats:
@@ -96,15 +96,82 @@ def fPC(model, data, labels, class_stats=False):
                 total_predictions[truth] += 1
 
             # calculate the class accuracies
-            class_acc = (correct_predictions / total_predictions) * 100
+            class_acc = (correct_predictions / total_predictions)
             # print out the class accuracies
             for i in range(len(classes)):
-                print(f"Class {classes[i]}:\t{class_acc[i]}%")
+                print(f"Class {classes[i]}:\t{class_acc[i]*100}%")
 
     return percent_correct
 
 
-def train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_size, show_loss=False):
+def optimize_hyperparameters(validation_x, validation_y, count):
+    """
+    Optimize hyperparameters on the validation set
+
+    @param: validation_x: torch.Tensor, validation_y: torch.Tensor, count: int
+    @return: best_hp: dict
+    """
+    # initialize the hyperparameters options
+    hidden_layer_list = np.array([64, 128, 256, 512, 1024])
+    batch_list = np.array([50, 100, 150, 200, 250])
+    learn_rate_list = np.array([0.001, 0.005, 0.01, 0.05, 0.1, 0.5])
+    epoch_list = np.array([10, 25, 50, 75, 100])
+    momentum_list = np.array([0.1, 0.25, 0.5, 0.75, 1])
+
+    # initialize a dictionary to store the optimal hyperparameters
+    best_hp = {
+        'hidden': 0.0,
+        'batch': 0.0,
+        'learn_rate': 0.0,
+        'num_epoch': 0.0,
+        'momentum': 0.0,
+        'loss': float('inf'),
+        'accuracy': 0.0
+    }
+
+    # optimize the hyperparametes over a set count
+    print('Optimizing hyperparameters...')
+    for i in range(count):
+        # randomly choose a set of hyperparameters
+        hidden_size = np.random.choice(hidden_layer_list)
+        epoch = np.random.choice(epoch_list)
+        batch_size = np.random.choice(batch_list)
+        learning_rate = np.random.choice(learn_rate_list)
+        momentum = np.random.choice(momentum_list)
+
+        # train the model using given hyperparameters
+        print(f"Run number: {i+1}\n" \
+        f"    Hidden layer size:\t{hidden_size}\n" \
+        f"    Epoch:\t\t{epoch}\n" \
+        f"    Batch size:\t\t{batch_size}\n" \
+        f"    Learning rate:\t{learning_rate}\n" \
+        f"    Momentum rate:\t{momentum}")
+
+        # initialize the model and optimizer with cross entropy loss function
+        model = FF(validation_x.size(1), hidden_size)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+
+        loss, acc = train_model(model, optimizer, criterion, validation_x, validation_y, epoch, batch_size)
+        print(f"    Loss:\t\t{loss}\n" \
+              f"    Accuracy:\t\t{acc}\n")
+
+        # update the optimal hyperparameters if the loss is lower and the accuracy is higher
+        if (loss < best_hp['loss']) and (acc > best_hp['accuracy']):
+            best_hp.update(hidden = hidden_size,
+                           batch = batch_size,
+                           learn_rate = learning_rate,
+                           num_epoch = epoch,
+                           momentum = momentum,
+                           loss = loss,
+                           accuracy = acc)
+
+    # print out optimal hyperparameters
+    print(f"Optimized hyperparameters:\n{best_hp}\n")
+    return best_hp
+
+
+def train_model(model, optimizer, criterion, train_x, train_y, epoch, batch_size, show_loss=False):
     """
     Train the model with the specified hyperparameters
 
@@ -112,12 +179,11 @@ def train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_siz
     @return: None
     """
     # keep track of current loss and accuracy for statistics
-    curr_loss = 0.0
-    curr_acc = 0.0
+    epoch_loss = 0.0
+    epoch_acc = 0.0
 
     # loop through the dataset multiple times
-    for e in range(epochs):
-
+    for e in range(epoch):
         # randomize the samples
         rand_idx = np.random.permutation(train_x.size(0))
         rand_x, rand_y = train_x[rand_idx,:], train_y[rand_idx]
@@ -139,15 +205,19 @@ def train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_siz
             loss.backward()
             optimizer.step()
 
-            # print statistics
-            curr_loss = loss.item()
-            curr_acc = fPC(model, batch_x, batch_y)
+            # set statistics
+            epoch_loss = loss.item()
+            epoch_acc = fPC(model, batch_x, batch_y)
 
-        # print statistics every 5 epochs
+        # print statistics every 5 epoch
         if show_loss and (e % 5 == 0):
             print(f"Epoch {e+5}\n" \
-                  f"    current loss:\t{curr_loss}\n"\
-                  f"    current accuracy:\t{curr_acc}%")
+                  f"    current loss:\t{epoch_loss}\n"\
+                  f"    current accuracy:\t{epoch_acc*100}%\n")
+
+    # get the accuracy of the whole dataset
+    epoch_acc = fPC(model, train_x, train_y)
+    return epoch_loss, epoch_acc
 
 
 def test_model(model, test_x, test_y):
@@ -161,7 +231,7 @@ def test_model(model, test_x, test_y):
     percent_correct = fPC(model, test_x, test_y, class_stats=True)
 
     # print out the accuracy
-    print(f'Accuracy of the model on testing set: {percent_correct}%')
+    print(f"Accuracy of the model on testing set: {percent_correct*100}%")
 
 
 def main():
@@ -169,27 +239,32 @@ def main():
     Main function.
     """
     # load the datasets
-    train_x, train_y = load_data('../UCI_HAR_Dataset', 'train')
+    data_x, data_y = load_data('../UCI_HAR_Dataset', 'train')
     test_x, test_y = load_data('../UCI_HAR_Dataset', 'test')
 
-    # initialize hyperparameters
-    hidden_size = 512
-    epochs = 100
-    batch_size = 100
-    learning_rate = 0.005
-    momentum = 0.5
+    # randomize the samples
+    rand_idx = np.random.permutation(data_x.size(0))
+    rand_x, rand_y = data_x[rand_idx,:], data_y[rand_idx]
+
+    # separate validation set and training set
+    ratio = int(data_x.shape[0]*0.7)
+    train_x, train_y = rand_x[:ratio,:], rand_y[:ratio]
+    validation_x, validation_y = rand_x[ratio:,:], rand_y[ratio:]
+
+    # optimize hyperparametes
+    hyperparameters = optimize_hyperparameters(validation_x, validation_y, 25)
 
     # initialize the model and optimizer with cross entropy loss function
-    model = FF(train_x.size(1), hidden_size)
+    model = FF(train_x.size(1), hyperparameters['hidden'])
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+    optimizer = optim.SGD(model.parameters(), lr=hyperparameters['learn_rate'], momentum=hyperparameters['momentum'])
 
     # train the model
-    train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_size, show_loss=True)
+    train_model(model, optimizer, criterion, train_x, train_y, hyperparameters['num_epoch'], hyperparameters['batch'], show_loss=True)
 
     # save the model
     # torch.save(model.state_dict(), './group_model.pth')
-    # model = FF(train_x.size(1), hidden_size)
+    # model = FF(train_x.size(1), hyperparameters['hidden'])
     # model.load_state_dict(torch.load('./group_model.pth'))
 
     # test the model
