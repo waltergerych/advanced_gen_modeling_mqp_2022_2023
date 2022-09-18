@@ -1,127 +1,199 @@
-import torch
+# Native libraries
+import os
+# External libraries
 import numpy as np
-import pandas as pd
-import torchvision
-import torchvision.transforms as transforms
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import *
-import os
+import torch.optim as optim
 
-def load_data(dataset: str, dataset_type: str):
-    """Load datasets into tensors"""
+class FF(nn.Module):
+    """
+    Class for feed-forward model from pytorch.
+    """
 
-    # Much easier method of loding data and labels
+    def __init__(self, input_size, hidden_size):
+        """
+        Class constructor for feed-forward model.
+
+        @param: input_size: int, hidden_size: int
+        @return: None
+        """
+        super().__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, 6)
+
+
+    def forward(self, data):
+        """
+        Forward propagation for the model.
+
+        First layer converts input data into the specified hidden layer size.
+        Second layer takes the output of the first layer through ReLU activation function.
+        Third layer converts hidden layer into 6 classes from the dataset
+
+        @param: data: torch.Tensor
+        @return: data: torch.Tensor
+        """
+        data = self.fc1(data)
+        data = F.relu(data)
+        data = self.fc2(data)
+        return data
+
+
+def load_data(dataset, dataset_type):
+    """
+    Load data from a given dataset name and dataset type (train/test).
+    The function expects the data to be in the following format:
+    "{dataset}/{dataset_type}/(X|y)_{dataset_type}.txt"
+
+    @param: dataset: string, dataset_type: string
+    @return: data: torch.Tensor, labels: torch.Tensor
+    """
+    # load data and its labels
     x = np.loadtxt(os.path.join(dataset, dataset_type, f"X_{dataset_type}.txt"))
     y = np.loadtxt(os.path.join(dataset, dataset_type, f"y_{dataset_type}.txt"))
 
-    # Numpy to tensor conversion
+    # convert loaded data from numpy to tensor
     data = torch.from_numpy(x).float()
     labels = torch.from_numpy(y).long()
 
-    # Zero index labels
+    # convert 1-indexed class labels to 0-indexed labels
     labels -= 1
 
     return data, labels
 
 
-# Load data and labels
-X_train = np.loadtxt("UCI_HAR_Dataset/test/X_test.txt", float, "X_float.txt")
+def fPC(model, data, labels, class_stats=False):
+    """
+    Measure of percent correct of the current model
+
+    @param: data: torch.Tensor, labels: torch.Tensor
+    @return: percent_correct: float
+    """
+    # initialize class predictions statistics
+    classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
+    correct_predictions = np.array([0, 0, 0, 0, 0, 0])
+    total_predictions = np.array([0, 0, 0, 0, 0, 0])
+
+    # run model without gradient calculation for better performance
+    with torch.no_grad():
+        # run the data through the model
+        logits = model(data)
+        outputs = F.softmax(logits, dim=1)
+        # get the predicted result from the output of the model
+        _, predicted = torch.max(outputs.data, 1)
+        # get the number of correct guesses
+        correct = (predicted == labels).sum().item()
+        # calculate the percent correct
+        percent_correct = (correct / labels.size(0)) * 100
+
+        # if class statistics flag is set, calculate the accuracy for each class
+        if class_stats:
+            # for each truth-guess pair, increment the correct/total predictions
+            for truth, guess in zip(labels, predicted):
+                correct_predictions[truth] += 1 if truth == guess else 0
+                total_predictions[truth] += 1
+
+            # calculate the class accuracies
+            class_acc = (correct_predictions / total_predictions) * 100
+            # print out the class accuracies
+            for i in range(len(classes)):
+                print(f"Class {classes[i]}:\t{class_acc[i]}%")
+
+    return percent_correct
 
 
-# Class for CNN
-class Net(nn.Module):
-    def __init__(self, input_size, hidden_size):
-        super().__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, 200)
-        self.relu = nn.ReLU()
-        self.fc3 = nn.Linear(200, 6)
+def train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_size, show_loss=False):
+    """
+    Train the model with the specified hyperparameters
 
-    def forward(self, x):
-        x = self.fc1(x)
-        x = self.fc2(x)
-        x = self.relu(x)
-        x = self.fc3(x)
-        return x
+    @param: model: FF, optimizer: torch.optim, criterion: torch.nn.modules.loss
+    @return: None
+    """
+    # keep track of current loss and accuracy for statistics
+    curr_loss = 0.0
+    curr_acc = 0.0
 
+    # loop through the dataset multiple times
+    for e in range(epochs):
 
-def train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_size):
-    for epoch in range(epochs):
-
-        running_loss = 0.0
-
+        # randomize the samples
         rand_idx = np.random.permutation(train_x.size(0))
-        rand_x, rand_y = train_x[rand_idx, :], train_y[rand_idx]
+        rand_x, rand_y = train_x[rand_idx,:], train_y[rand_idx]
 
+        # process the epoch batch by batch
         for i in range(0, (train_y.size(0)//batch_size)):
-            start_idx = i * batch_size
-            end_idx = start_idx + batch_size
-            batch_x = rand_x[start_idx : end_idx, :]
-            batch_y = rand_y[start_idx : end_idx]
+            # initialize the starting and ending index of the current batch
+            start_idx = i*batch_size
+            end_idx = start_idx+batch_size
+            batch_x = rand_x[start_idx:end_idx,:]
+            batch_y = rand_y[start_idx:end_idx]
 
-            # Same steps as tutorial, zero gradients, then forward + backward steps and optimization
+            # zero the parameter gradients
             optimizer.zero_grad()
 
+            # forward + backward + optimize
             outputs = model(batch_x)
             loss = criterion(outputs, batch_y)
             loss.backward()
             optimizer.step()
 
-            running_loss = loss.item()
+            # print statistics
+            curr_loss = loss.item()
+            curr_acc = fPC(model, batch_x, batch_y)
 
-        print(f"Running loss for epoch {epoch}: {running_loss}")
+        # print statistics every 5 epochs
+        if show_loss and (e % 5 == 0):
+            print(f"Epoch {e+5}\n" \
+                  f"    current loss:\t{curr_loss}\n"\
+                  f"    current accuracy:\t{curr_acc}%")
 
 
-def get_accuracy(model, inputs, labels):
-    """Get model accuracy"""
-    total_pred = [0]*6
-    correct_pred = [0]*6
-    classes = ["Walking", "Upstairs", "Downstairs", "Sitting", "Standing", "Laying"]
+def test_model(model, test_x, test_y):
+    """
+    Test the already trained model using the testing set
 
-    outputs = model(inputs)
-    _, predictions = torch.max(outputs, 1)
-    for label, prediction in zip(labels, predictions):
-        correct_pred[label] += 1 if label == prediction else 0
-        total_pred[label] += 1
+    @param: test_x: torch.Tensor, test_y: torch.Tensor
+    @return: None
+    """
+    # get the accuracy of the model on the testing set
+    percent_correct = fPC(model, test_x, test_y, class_stats=True)
 
-    print("Accuracies: \n")
-
-    for i, data in enumerate(zip(correct_pred, total_pred)):
-        corr, total = data
-        accuracy = 100 * (float(corr) / total)
-        print(f"{str(classes[i])}: {str(accuracy)}%")
-
-    total_acc = 100 * (sum(correct_pred) / sum(total_pred))
-    print(f"Overall accuracy: {total_acc}%")
-    
+    # print out the accuracy
+    print(f'Accuracy of the model on testing set: {percent_correct}%')
 
 
 def main():
-    train_x, train_y = load_data("UCI_HAR_Dataset", "train")
-    test_x, test_y = load_data("UCI_HAR_Dataset", "test")
+    """
+    Main function.
+    """
+    # load the datasets
+    train_x, train_y = load_data('../UCI_HAR_Dataset', 'train')
+    test_x, test_y = load_data('../UCI_HAR_Dataset', 'test')
 
-    # Model parameters
+    # initialize hyperparameters
     hidden_size = 512
     epochs = 100
-    batch_size = 150
+    batch_size = 100
     learning_rate = 0.005
-    momentum = 0.9
+    momentum = 0.5
 
-    model = Net(561, hidden_size)
+    # initialize the model and optimizer with cross entropy loss function
+    model = FF(train_x.size(1), hidden_size)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
 
-    # Train and test
-    train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_size)
+    # train the model
+    train_model(model, optimizer, criterion, train_x, train_y, epochs, batch_size, show_loss=True)
 
-    get_accuracy(model, test_x, test_y)
+    # save the model
+    # torch.save(model.state_dict(), './group_model.pth')
+    # model = FF(train_x.size(1), hidden_size)
+    # model.load_state_dict(torch.load('./group_model.pth'))
 
-    # Save model
-    PATH = "./cifar_net.pth"
-    torch.save(model.state_dict(), PATH)
+    # test the model
+    test_model(model, test_x, test_y)
 
 
 if __name__ == "__main__":
