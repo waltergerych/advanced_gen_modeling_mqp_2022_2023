@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import random
+import torch.nn.functional as F
 
 PATH = "UCI_HAR_Dataset/train/"
 
@@ -13,14 +14,12 @@ class Generator(nn.Module):
         self.input_size = input_size
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, 561)
-        self.relu = nn.ReLU()
-        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = self.fc1(x)
-        x = self.relu(x)
+        # x = F.relu(x)
         x = self.fc2(x)
-        x = self.sigmoid(x)
+        x = torch.sigmoid(x)
         return x
 
 class Discriminator(nn.Module):
@@ -29,15 +28,13 @@ class Discriminator(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.fc1 = nn.Linear(input_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, 2)
-        self.relu = nn.ReLU()
-        self.sigmoid = nn.Sigmoid()
+        self.fc2 = nn.Linear(hidden_size, 1)
 
     def forward(self, x):
         x = self.fc1(x)
-        x = self.relu(x)
+        # x = F.relu(x)
         x = self.fc2(x)
-        x = self.sigmoid(x)
+        x = torch.sigmoid(x)
         return x
 
 ## Function to load data
@@ -49,7 +46,7 @@ def load_data(dataset: str, dataset_type: str):
 
     # Numpy to tensor conversion
     data = torch.from_numpy(x).float()
-    labels = torch.from_numpy(y).long()
+    labels = torch.from_numpy(y).float()
 
     # Zero index labels
     labels -= 1
@@ -81,12 +78,12 @@ def train(generator, discrim, inputs, labels, epochs, half_batch_size, learning_
     # Get a tensor for the batch labels
     batch_labels = []
     for i in range(half_batch_size):
-        batch_labels.append(0)
+        batch_labels.append(0.0)
     for i in range(half_batch_size):
-        batch_labels.append(1)
+        batch_labels.append(1.0)
     batch_labels = torch.tensor(batch_labels)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCELoss()
     g_optimizer = torch.optim.SGD(generator.parameters(), lr=learning_rate, momentum=momentum)
     d_optimizer = torch.optim.SGD(discrim.parameters(), lr=learning_rate, momentum=momentum)
 
@@ -110,13 +107,13 @@ def train(generator, discrim, inputs, labels, epochs, half_batch_size, learning_
         if turn == ratio:
             turn = 0
             # Backpropagate discriminator
-            d_loss = criterion(outputs, batch_labels)
+            d_loss = criterion(outputs.flatten(), batch_labels)
             d_loss.backward()
             d_optimizer.step()
         else:
             turn += 1
             # Backpropagate generator
-            g_loss = criterion(outputs, batch_labels)
+            g_loss = criterion(outputs.flatten(), batch_labels)
             g_loss.backward()
             g_optimizer.step()
 
@@ -130,11 +127,12 @@ def main():
     half_batch_size = 5
     learning_rate = .005
     momentum = .9
-    hidden_layers = 58
-    ratio = 3
+    g_hidden_layers = 58
+    d_hidden_layers = 58
+    ratio = 5
 
-    generator = Generator(1, hidden_layers)
-    discrim = Discriminator(561, hidden_layers)
+    generator = Generator(1, g_hidden_layers)
+    discrim = Discriminator(561, d_hidden_layers)
     inputs, labels = load_data("UCI_HAR_Dataset", "train")
 
     train(generator, discrim, inputs, labels, epochs, half_batch_size, learning_rate, momentum, ratio)
@@ -148,12 +146,12 @@ def main():
     real = sample(half_batch_size, inputs)
     outputs = discrim(torch.cat((fake, real), 0))
     print("Final output of discriminator")
-    print(outputs)
+    # print(outputs)
 
     for guess in outputs:
-        if guess[0] == 1:
+        if guess[0] == 0:
             print("Fake")
-        elif guess[1] == 1:
+        elif guess[0] == 1:
             print("Real")
 
 if __name__ == "__main__":
