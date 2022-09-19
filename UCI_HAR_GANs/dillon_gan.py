@@ -17,7 +17,6 @@ class Generator(nn.Module):
 
     def forward(self, x):
         x = self.fc1(x)
-        # x = F.relu(x)
         x = self.fc2(x)
         x = torch.sigmoid(x)
         return x
@@ -32,7 +31,6 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         x = self.fc1(x)
-        # x = F.relu(x)
         x = self.fc2(x)
         x = torch.sigmoid(x)
         return x
@@ -90,7 +88,11 @@ def train(generator, discrim, inputs, labels, epochs, half_batch_size, learning_
     ## Train ##
     turn = 0
     for epoch in range(epochs):
-        
+
+        # Zero gradients
+        g_optimizer.zero_grad()
+        d_optimizer.zero_grad()
+
         # Generate fake data
         fake = get_fake(generator, half_batch_size)
 
@@ -101,19 +103,19 @@ def train(generator, discrim, inputs, labels, epochs, half_batch_size, learning_
         batch = torch.cat((fake, real), 0)
 
         # Feed to discriminator
-        outputs = discrim(batch)
+        outputs = discrim(real)
 
         # Loss function alternates at ratio:1 = G:D where ratio is defined in GAN parameters
         if turn == ratio:
             turn = 0
             # Backpropagate discriminator
-            d_loss = criterion(outputs.flatten(), batch_labels)
+            d_loss = criterion(outputs.flatten(), batch_labels[half_batch_size:])
             d_loss.backward()
             d_optimizer.step()
         else:
             turn += 1
             # Backpropagate generator
-            g_loss = criterion(outputs.flatten(), batch_labels)
+            g_loss = criterion(outputs.flatten()[0:half_batch_size], batch_labels[0:half_batch_size])
             g_loss.backward()
             g_optimizer.step()
 
@@ -146,13 +148,17 @@ def main():
     real = sample(half_batch_size, inputs)
     outputs = discrim(torch.cat((fake, real), 0))
     print("Final output of discriminator")
-    # print(outputs)
+    print(outputs)
 
+    fake, real, total = 0, 0, 0
     for guess in outputs:
-        if guess[0] == 0:
-            print("Fake")
-        elif guess[0] == 1:
-            print("Real")
+        if (guess[0] - 0.5) < 0:
+            fake += 1
+        elif (guess[0] - 0.5) > 0:
+            real += 1
+        total += 1
+    print("Discriminator accuracy:\t" + str((fake + real)/total))
+    print("Number of real data:\t" + str(real))
 
 if __name__ == "__main__":
     main()
