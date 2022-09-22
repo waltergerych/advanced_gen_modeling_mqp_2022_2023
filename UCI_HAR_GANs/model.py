@@ -5,59 +5,57 @@ import torch.nn as nn
 
 
 class Generator(nn.Module):
-    """
-    Class for generating fake HAR data
-    """
+    """Class for generating fake HAR data"""
 
     def __init__(self, input_size, hidden_size):
-        """
-        Class constructor for generator.
+        """Class constructor for generator.
 
         First layer converts input data into the specified hidden layer size.
         Second layer takes the output of the first layer through ReLU activation function.
         Third layer converts hidden layer into an output of the same size input from the dataset.
-        Fourth layer takes the output through a sigmoid function for normalization.
+        Fourth layer takes the output through a tanh function for normalization.
 
-        @param: input_size: int, hidden_size: int
-        @return: None
+        Args:
+            input_size (torch.Tensor): the input size of the real data.
+            hidden_size (int): the hidden layer size.
         """
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         self.output = nn.Linear(hidden_size, input_size)
-        self.sigmoid = nn.Sigmoid()
+        self.tanh = nn.Tanh()
 
 
     def forward(self, data):
-        """
-        Forward propagation for the model.
+        """Forward propagation for the model.
 
-        @param: data: torch.Tensor
-        @return: data: torch.Tensor
+        Args:
+            data (torch.Tensor): the data that are passed through the network's layers.
+
+        Returns:
+            data (torch.Tensor): the output data from all the layers.
         """
         data = self.fc1(data)
         data = self.relu(data)
         data = self.output(data)
-        data = self.sigmoid(data)
+        data = self.tanh(data)
         return data
 
 
 class Discriminator(nn.Module):
-    """
-    Class for discriminating data as real/fake
-    """
+    """Class for discriminating data as real/fake"""
 
     def __init__(self, input_size, hidden_size):
-        """
-        Class constructor for discriminator.
+        """Class constructor for discriminator.
 
         First layer converts input data into the specified hidden layer size.
         Second layer takes the output of the first layer through ReLU activation function.
-        Third layer converts hidden layer into an output of the same size input from the dataset.
+        Third layer converts hidden layer into an output between 0 and 1.
         Fourth layer takes the output through a sigmoid function for normalization.
 
-        @param: input_size: int, hidden_size: int
-        @return: None
+        Args:
+            input_size (torch.Tensor): the input size of the real data.
+            hidden_size (int): the hidden layer size.
         """
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
@@ -67,11 +65,13 @@ class Discriminator(nn.Module):
 
 
     def forward(self, data):
-        """
-        Forward propagation for the model.
+        """Forward propagation for the discriminator.
 
-        @param: data: torch.Tensor
-        @return: data: torch.Tensor
+        Args:
+            data (torch.Tensor): the data that are passed through the network's layers.
+
+        Returns:
+            data (torch.Tensor): the output data from all the layers.
         """
         data = self.fc1(data)
         data = self.relu(data)
@@ -81,16 +81,20 @@ class Discriminator(nn.Module):
 
 
 def train_model(generator, discriminator, generator_optimizer, discriminator_optimizer, criterion, true_x, true_y, epoch, batch_size, show_loss=False):
-    """
-    Train the generator and discriminato with the specified hyperparameters
+    """Train the generator and discriminator with the specified hyperparameters.
 
-    @param: generator: Generator, discriminator: Discriminator,
-            generator_optimizer: torch.optim, discriminator_optimizer: torch.optim,
-            criterion: torch.nn.modules.loss, true_x: torch.Tensor, true_y: torch.Tensor,
-            epoch: int, batch_size: int, show_loss: bool
-    @return: None
+    Args:
+        generator (Generator): the generator network.
+        discriminator (Discriminator): the discriminator network.
+        generator_optimizer (torch.optim): the generator optimizer.
+        discriminator_optimizer (torch.optim): the discriminator optimizer.
+        criterion (torch.nn.modules.loss): loss function for the models.
+        true_x (torch.Tensor): real data features.
+        true_y (torch.Tensor): real data labels.
+        epoch (int): number of training epochs.
+        batch_size (int): size of training batch.
+        show_loss (bool): print loss of each epoch if True.
     """
-
     # loop through the dataset multiple times
     for e in range(epoch):
         # randomize the samples

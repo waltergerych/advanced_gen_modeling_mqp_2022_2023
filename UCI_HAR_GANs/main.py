@@ -7,9 +7,7 @@ import torch.nn as nn
 
 
 def main():
-    """
-    Main function.
-    """
+    """Main function"""
     # load the datasets
     train_x, train_y = utils.load_data('../UCI_HAR_Dataset', 'train')
     test_x, test_y = utils.load_data('../UCI_HAR_Dataset', 'test')

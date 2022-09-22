@@ -6,13 +6,19 @@ import torch
 
 
 def load_data(dataset, dataset_type):
-    """
+    """Load data from text file
+
     Load data from a given dataset name and dataset type (train/test).
     The function expects the data to be in the following format:
     "{dataset}/{dataset_type}/(X|y)_{dataset_type}.txt"
 
-    @param: dataset: string, dataset_type: string
-    @return: data: torch.Tensor, labels: torch.Tensor
+    Args:
+        dataset (string): the name of the directory that the data lives in.
+        dataset_type (string): train or test type
+
+    Returns:
+        data (torch.Tensor): the features of the data.
+        labels (torch.Tensor): the labels of the data.
     """
     # load data and its labels
     x = np.loadtxt(os.path.join(dataset, dataset_type, f"X_{dataset_type}.txt"))
@@ -29,7 +35,8 @@ def load_data(dataset, dataset_type):
 
 
 def get_activity_data(x, y, activity_label):
-    """
+    """Parse through data set to get a specified activity
+
     Given data x, y, and an activity label, return a subset of the data with only specified label.
     Activity label is defined as the following:
         WALKING: 0
@@ -39,8 +46,14 @@ def get_activity_data(x, y, activity_label):
         STANDING: 4
         LAYING: 5
 
-    @param: x: torch.Tensor, y: torch.Tensor, activity_label: int
-    @return: data_x: torch.Tensor, data_y: torch.Tensor
+    Args:
+        x (torch.Tensor): the features of the data.
+        y (torch.Tensor): the labels of the data.
+        activity_label (int): specify the activity label wanted.
+
+    Returns:
+        data_x (torch.Tensor): the features of the data given the activity label.
+        data_y (torch.Tensor): the labels of the data given the activity label.
     """
     # find a list of index in y where label is equal to the specified activity label
     activity_idx = (y == activity_label).nonzero().flatten()
