@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class FF(nn.Module):
+class Classifier(nn.Module):
     """
     Class for feed-forward model from pytorch.
     """
@@ -73,7 +73,7 @@ def get_accuracy(model, data, labels, class_stats=False):
             # print out the class accuracies
             for i in range(len(classes)):
                 print(f"Class {classes[i]}:\t{class_acc[i]*100}%")
-    
+
     # print out the accuracy
     print(f"Accuracy of the model on testing set: {percent_correct*100}%")
 
@@ -88,7 +88,7 @@ def evaluate(true_data, generated_data, classifier_path):
         generated_data: the batch of fake data
         classifier_path: the path to the pytorch classifier model
     """
-    classifier = FF(561, 128)
+    classifier = Classifier(561, 128)
     classifier.load_state_dict(torch.load(classifier_path))
 
     true_x, true_y = true_data
@@ -98,3 +98,5 @@ def evaluate(true_data, generated_data, classifier_path):
     true_correct = get_accuracy(classifier, true_x, true_y.type(torch.int16), class_stats=True)
     print("\n---Classifier Performance On Fake Data---\n")
     generated_correct = get_accuracy(classifier, generated_x, generated_y.type(torch.int16), class_stats=True)
+
+    return true_correct, generated_correct

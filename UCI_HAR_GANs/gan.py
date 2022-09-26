@@ -2,6 +2,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class Generator(nn.Module):
@@ -21,9 +22,7 @@ class Generator(nn.Module):
         """
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
         self.output = nn.Linear(hidden_size, input_size)
-        self.tanh = nn.Tanh()
 
 
     def forward(self, data):
@@ -36,9 +35,9 @@ class Generator(nn.Module):
             data (torch.Tensor): the output data from all the layers.
         """
         data = self.fc1(data)
-        data = self.relu(data)
+        data = F.relu(data)
         data = self.output(data)
-        data = self.tanh(data)
+        data = torch.tanh(data)
         return data
 
 
@@ -59,9 +58,7 @@ class Discriminator(nn.Module):
         """
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
         self.output = nn.Linear(hidden_size, 1)
-        self.sigmoid = nn.Sigmoid()
 
 
     def forward(self, data):
@@ -74,13 +71,13 @@ class Discriminator(nn.Module):
             data (torch.Tensor): the output data from all the layers.
         """
         data = self.fc1(data)
-        data = self.relu(data)
+        data = F.relu(data)
         data = self.output(data)
-        data = self.sigmoid(data)
+        data = torch.sigmoid(data)
         return data
 
 
-def train_model(generator, discriminator, generator_optimizer, discriminator_optimizer, criterion, true_x, true_y, epoch, batch_size, show_loss=False):
+def train_model(generator, discriminator, generator_optimizer, discriminator_optimizer, criterion, true_x, true_y, epoch, batch_size, ratio):
     """Train the generator and discriminator with the specified hyperparameters.
 
     Args:
@@ -93,7 +90,7 @@ def train_model(generator, discriminator, generator_optimizer, discriminator_opt
         true_y (torch.Tensor): real data labels.
         epoch (int): number of training epochs.
         batch_size (int): size of training batch.
-        show_loss (bool): print loss of each epoch if True.
+        ratio (int): the training ratio between generator and discriminator
     """
     # loop through the dataset multiple times
     for e in range(epoch):
@@ -119,14 +116,15 @@ def train_model(generator, discriminator, generator_optimizer, discriminator_opt
             generator_loss.backward()
             generator_optimizer.step()
 
-            # train the discriminator on the true data
-            discriminator_optimizer.zero_grad()
-            true_discriminator_out = discriminator(batch_x)
-            true_discriminator_loss = criterion(true_discriminator_out.flatten(), batch_y)
+            if e % ratio == 0:
+                # train the discriminator on the true data
+                discriminator_optimizer.zero_grad()
+                true_discriminator_out = discriminator(batch_x)
+                true_discriminator_loss = criterion(true_discriminator_out.flatten(), batch_y)
 
-            # add .detach() here think about this
-            generator_discriminator_out = discriminator(generated_data.detach())
-            generator_discriminator_loss = criterion(generator_discriminator_out.flatten(), torch.zeros(batch_size))
-            discriminator_loss = (true_discriminator_loss + generator_discriminator_loss) / 2
-            discriminator_loss.backward()
-            discriminator_optimizer.step()
+                # train the discriminator on the fake data
+                generator_discriminator_out = discriminator(generated_data.detach())
+                generator_discriminator_loss = criterion(generator_discriminator_out.flatten(), torch.zeros(batch_size))
+                discriminator_loss = (true_discriminator_loss + generator_discriminator_loss) / 2
+                discriminator_loss.backward()
+                discriminator_optimizer.step()

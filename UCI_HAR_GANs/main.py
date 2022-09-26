@@ -1,7 +1,7 @@
 # Internal libraries
 import utils
-import model
-import evaluate
+import gan
+import classifier
 # External libraries
 import torch.optim as optim
 import torch.nn as nn
@@ -14,22 +14,23 @@ def main():
     train_x, train_y = utils.load_data('../UCI_HAR_Dataset', 'train')
     test_x, test_y = utils.load_data('../UCI_HAR_Dataset', 'test')
 
-    # get the data for each activity labels
-    # walking_x, walking_y = utils.get_activity_data(train_x, train_y, 0)
-    # upstairs_x, upstairs_y = utils.get_activity_data(train_x, train_y, 1)
-    # downstairs_x, downstairs_y = utils.get_activity_data(train_x, train_y, 2)
-    # sitting_x, sitting_y = utils.get_activity_data(train_x, train_y, 3)
-    # standing_x, standing_y = utils.get_activity_data(train_x, train_y, 4)
-    # laying_x, laying_y = utils.get_activity_data(train_x, train_y, 5)
-
     classes = [0, 1, 2, 3, 4, 5]
 
     # initialize hyperparameters
+<<<<<<< HEAD
     hidden_size = 64
     epoch = 5
     batch_size = 100
     learning_rate = 0.005
     momentum = 0.9
+=======
+    hidden_size = 512
+    epoch = 25
+    batch_size = 100
+    learning_rate = 0.005
+    momentum = 0.5
+    train_ratio = 5
+>>>>>>> 4dd9cba257189071606b7d82bc6e31371e870063
 
     feature_size = 561
 
@@ -40,10 +41,10 @@ def main():
     # optimizers
     generator_optimizers = []
     discriminator_optimizers = []
-    
+
     for i in classes:
-        generators.append(model.Generator(train_x.size(1), hidden_size))
-        discriminators.append(model.Discriminator(train_x.size(1), hidden_size))
+        generators.append(gan.Generator(train_x.size(1), hidden_size))
+        discriminators.append(gan.Discriminator(train_x.size(1), hidden_size))
         generator_optimizers.append(optim.SGD(generators[i].parameters(), lr=learning_rate, momentum=momentum))
         discriminator_optimizers.append(optim.SGD(discriminators[i].parameters(), lr=learning_rate, momentum=momentum))
 
@@ -54,7 +55,7 @@ def main():
         x, y = utils.get_activity_data(train_x, train_y, i)
 
         # train the models
-        model.train_model(generators[i], discriminators[i], generator_optimizers[i], discriminator_optimizers[i], criterion, x, y, epoch, batch_size)
+        gan.train_model(generators[i], discriminators[i], generator_optimizers[i], discriminator_optimizers[i], criterion, x, y, epoch, batch_size, train_ratio)
 
         # place in eval mode
         generators[i].eval()
@@ -65,13 +66,18 @@ def main():
     for i in classes:
         noise = torch.randn(size=(batch_size*5, feature_size)).float()
         generated_data_x.append(generators[i](noise))
+<<<<<<< HEAD
         generated_data_y.append(torch.mul(torch.ones(batch_size*5), i))
     
+=======
+        generated_data_y.append(torch.mul(torch.ones(batch_size*2), i))
+
+>>>>>>> 4dd9cba257189071606b7d82bc6e31371e870063
     combined_generated_data_x = torch.cat(generated_data_x)
     combined_generated_data = combined_generated_data_x, torch.cat(generated_data_y)
     true_data = test_x, test_y
 
-    evaluate.evaluate(true_data, combined_generated_data, 'group_model_classifier.pth')
+    classifier.evaluate(true_data, combined_generated_data, 'group_model_classifier.pth')
 
 if __name__ == "__main__":
     main()
