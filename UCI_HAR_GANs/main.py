@@ -1,7 +1,7 @@
 # Internal libraries
 import utils
 import model
-import evaluate
+import classifier
 # External libraries
 import torch.optim as optim
 import torch.nn as nn
@@ -63,7 +63,7 @@ def main():
     combined_generated_data = combined_generated_data_x, torch.cat(generated_data_y)
     true_data = test_x, test_y
 
-    evaluate.evaluate(true_data, combined_generated_data, 'group_model_classifier.pth')
+    classifier.evaluate(true_data, combined_generated_data, 'group_model_classifier.pth')
 
 if __name__ == "__main__":
     main()
