@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class FF(nn.Module):
+class Classifier(nn.Module):
     """
     Class for feed-forward model from pytorch.
     """
@@ -88,7 +88,7 @@ def evaluate(true_data, generated_data, classifier_path):
         generated_data: the batch of fake data
         classifier_path: the path to the pytorch classifier model
     """
-    classifier = FF(561, 128)
+    classifier = Classifier(561, 128)
     classifier.load_state_dict(torch.load(classifier_path))
 
     true_x, true_y = true_data

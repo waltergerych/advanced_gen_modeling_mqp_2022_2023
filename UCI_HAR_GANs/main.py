@@ -14,14 +14,6 @@ def main():
     train_x, train_y = utils.load_data('../UCI_HAR_Dataset', 'train')
     test_x, test_y = utils.load_data('../UCI_HAR_Dataset', 'test')
 
-    # get the data for each activity labels
-    # walking_x, walking_y = utils.get_activity_data(train_x, train_y, 0)
-    # upstairs_x, upstairs_y = utils.get_activity_data(train_x, train_y, 1)
-    # downstairs_x, downstairs_y = utils.get_activity_data(train_x, train_y, 2)
-    # sitting_x, sitting_y = utils.get_activity_data(train_x, train_y, 3)
-    # standing_x, standing_y = utils.get_activity_data(train_x, train_y, 4)
-    # laying_x, laying_y = utils.get_activity_data(train_x, train_y, 5)
-
     classes = [0, 1, 2, 3, 4, 5]
 
     # initialize hyperparameters
@@ -40,7 +32,7 @@ def main():
     # optimizers
     generator_optimizers = []
     discriminator_optimizers = []
-    
+
     for i in classes:
         generators.append(model.Generator(train_x.size(1), hidden_size))
         discriminators.append(model.Discriminator(train_x.size(1), hidden_size))
@@ -66,7 +58,7 @@ def main():
         noise = torch.randn(size=(batch_size*2, feature_size)).float()
         generated_data_x.append(generators[i](noise))
         generated_data_y.append(torch.mul(torch.ones(batch_size*2), i))
-    
+
     combined_generated_data_x = torch.cat(generated_data_x)
     combined_generated_data = combined_generated_data_x, torch.cat(generated_data_y)
     true_data = test_x, test_y
