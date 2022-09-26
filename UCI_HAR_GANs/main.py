@@ -22,6 +22,7 @@ def main():
     batch_size = 100
     learning_rate = 0.005
     momentum = 0.9
+    train_ratio = 5
     feature_size = 561
 
     # models
