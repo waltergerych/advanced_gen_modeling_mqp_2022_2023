@@ -17,21 +17,11 @@ def main():
     classes = [0, 1, 2, 3, 4, 5]
 
     # initialize hyperparameters
-<<<<<<< HEAD
     hidden_size = 64
     epoch = 5
     batch_size = 100
     learning_rate = 0.005
     momentum = 0.9
-=======
-    hidden_size = 512
-    epoch = 25
-    batch_size = 100
-    learning_rate = 0.005
-    momentum = 0.5
-    train_ratio = 5
->>>>>>> 4dd9cba257189071606b7d82bc6e31371e870063
-
     feature_size = 561
 
     # models
@@ -66,13 +56,8 @@ def main():
     for i in classes:
         noise = torch.randn(size=(batch_size*5, feature_size)).float()
         generated_data_x.append(generators[i](noise))
-<<<<<<< HEAD
         generated_data_y.append(torch.mul(torch.ones(batch_size*5), i))
-    
-=======
-        generated_data_y.append(torch.mul(torch.ones(batch_size*2), i))
 
->>>>>>> 4dd9cba257189071606b7d82bc6e31371e870063
     combined_generated_data_x = torch.cat(generated_data_x)
     combined_generated_data = combined_generated_data_x, torch.cat(generated_data_y)
     true_data = test_x, test_y
