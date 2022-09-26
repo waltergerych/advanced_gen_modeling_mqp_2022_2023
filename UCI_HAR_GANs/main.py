@@ -1,6 +1,6 @@
 # Internal libraries
 import utils
-import model
+import gan
 import classifier
 # External libraries
 import torch.optim as optim
@@ -18,10 +18,11 @@ def main():
 
     # initialize hyperparameters
     hidden_size = 512
-    epoch = 5
+    epoch = 25
     batch_size = 100
     learning_rate = 0.005
     momentum = 0.5
+    train_ratio = 5
 
     feature_size = 561
 
@@ -34,8 +35,8 @@ def main():
     discriminator_optimizers = []
 
     for i in classes:
-        generators.append(model.Generator(train_x.size(1), hidden_size))
-        discriminators.append(model.Discriminator(train_x.size(1), hidden_size))
+        generators.append(gan.Generator(train_x.size(1), hidden_size))
+        discriminators.append(gan.Discriminator(train_x.size(1), hidden_size))
         generator_optimizers.append(optim.SGD(generators[i].parameters(), lr=learning_rate, momentum=momentum))
         discriminator_optimizers.append(optim.SGD(discriminators[i].parameters(), lr=learning_rate, momentum=momentum))
 
@@ -46,7 +47,7 @@ def main():
         x, y = utils.get_activity_data(train_x, train_y, i)
 
         # train the models
-        model.train_model(generators[i], discriminators[i], generator_optimizers[i], discriminator_optimizers[i], criterion, x, y, epoch, batch_size)
+        gan.train_model(generators[i], discriminators[i], generator_optimizers[i], discriminator_optimizers[i], criterion, x, y, epoch, batch_size, train_ratio)
 
         # place in eval mode
         generators[i].eval()
