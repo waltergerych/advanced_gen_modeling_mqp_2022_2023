@@ -17,14 +17,13 @@ def main():
     classes = [0, 1, 2, 3, 4, 5]
 
     # initialize hyperparameters
+    input_size = 128
     hidden_size = 512
-    epoch = 25
+    epoch = 5000
     batch_size = 100
     learning_rate = 0.005
     momentum = 0.5
     train_ratio = 5
-
-    feature_size = 561
 
     # models
     generators = []
@@ -35,7 +34,7 @@ def main():
     discriminator_optimizers = []
 
     for i in classes:
-        generators.append(gan.Generator(train_x.size(1), hidden_size))
+        generators.append(gan.Generator(input_size, hidden_size, train_x.size(1)))
         discriminators.append(gan.Discriminator(train_x.size(1), hidden_size))
         generator_optimizers.append(optim.SGD(generators[i].parameters(), lr=learning_rate, momentum=momentum))
         discriminator_optimizers.append(optim.SGD(discriminators[i].parameters(), lr=learning_rate, momentum=momentum))
@@ -47,16 +46,20 @@ def main():
         x, y = utils.get_activity_data(train_x, train_y, i)
 
         # train the models
-        gan.train_model(generators[i], discriminators[i], generator_optimizers[i], discriminator_optimizers[i], criterion, x, y, epoch, batch_size, train_ratio)
+        gan.train_model(generators[i], discriminators[i], generator_optimizers[i], discriminator_optimizers[i], criterion, x, y, epoch, batch_size, input_size, train_ratio)
 
         # place in eval mode
         generators[i].eval()
+
+        # save the model
+        torch.save(generators[i].state_dict(), f"./G{i}_model.pth")
+        torch.save(discriminators[i].state_dict(), f"./D{i}_model.pth")
 
     # test the model
     generated_data_x = []
     generated_data_y = []
     for i in classes:
-        noise = torch.randn(size=(batch_size*2, feature_size)).float()
+        noise = torch.randn(size=(batch_size*2, input_size)).float()
         generated_data_x.append(generators[i](noise))
         generated_data_y.append(torch.mul(torch.ones(batch_size*2), i))
 

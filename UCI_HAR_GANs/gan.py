@@ -8,7 +8,7 @@ import torch.nn.functional as F
 class Generator(nn.Module):
     """Class for generating fake HAR data"""
 
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, output_size):
         """Class constructor for generator.
 
         First layer converts input data into the specified hidden layer size.
@@ -22,7 +22,7 @@ class Generator(nn.Module):
         """
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
-        self.output = nn.Linear(hidden_size, input_size)
+        self.output = nn.Linear(hidden_size, output_size)
 
 
     def forward(self, data):
@@ -77,7 +77,7 @@ class Discriminator(nn.Module):
         return data
 
 
-def train_model(generator, discriminator, generator_optimizer, discriminator_optimizer, criterion, true_x, true_y, epoch, batch_size, ratio):
+def train_model(generator, discriminator, generator_optimizer, discriminator_optimizer, criterion, true_x, true_y, epoch, batch_size, input_size, ratio):
     """Train the generator and discriminator with the specified hyperparameters.
 
     Args:
@@ -107,16 +107,25 @@ def train_model(generator, discriminator, generator_optimizer, discriminator_opt
             batch_y = rand_y[start_idx:end_idx]
 
             # generate a noise data from normal distribution
-            noise = torch.randn(size=(batch_size, batch_x.size(1))).float()
+            noise = torch.randn(size=(batch_size, input_size)).float()
             generated_data = generator(noise)
 
+            # freeze the discriminator and unfreeze generator
+            discriminator.eval()
+            generator.train()
+
             # train the generator
+            generator_optimizer.zero_grad()
             generator_discriminator_out = discriminator(generated_data)
             generator_loss = criterion(generator_discriminator_out.flatten(), batch_y)
             generator_loss.backward()
             generator_optimizer.step()
 
             if e % ratio == 0:
+                # unfreeze discriminator and freeze generator
+                discriminator.train()
+                generator.eval()
+
                 # train the discriminator on the true data
                 discriminator_optimizer.zero_grad()
                 true_discriminator_out = discriminator(batch_x)
@@ -125,6 +134,6 @@ def train_model(generator, discriminator, generator_optimizer, discriminator_opt
                 # train the discriminator on the fake data
                 generator_discriminator_out = discriminator(generated_data.detach())
                 generator_discriminator_loss = criterion(generator_discriminator_out.flatten(), torch.zeros(batch_size))
-                discriminator_loss = (true_discriminator_loss + generator_discriminator_loss) / 2
+                discriminator_loss = (true_discriminator_loss + generator_discriminator_loss)
                 discriminator_loss.backward()
                 discriminator_optimizer.step()
