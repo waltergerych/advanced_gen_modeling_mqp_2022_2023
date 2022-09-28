@@ -22,7 +22,7 @@ def main():
     epoch = 5000
     batch_size = 100
     learning_rate = 0.005
-    momentum = 0.5
+    momentum = 0.9
     train_ratio = 5
 
     # models
@@ -59,9 +59,13 @@ def main():
     generated_data_x = []
     generated_data_y = []
     for i in classes:
+<<<<<<< HEAD
         noise = torch.randn(size=(batch_size*2, input_size)).float()
+=======
+        noise = torch.randn(size=(batch_size*5, feature_size)).float()
+>>>>>>> f78bb4d2dbd0ab464886e2066c64edcf46a60917
         generated_data_x.append(generators[i](noise))
-        generated_data_y.append(torch.mul(torch.ones(batch_size*2), i))
+        generated_data_y.append(torch.mul(torch.ones(batch_size*5), i))
 
     combined_generated_data_x = torch.cat(generated_data_x)
     combined_generated_data = combined_generated_data_x, torch.cat(generated_data_y)
