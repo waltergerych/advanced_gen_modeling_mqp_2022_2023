@@ -75,7 +75,7 @@ def main():
     classifier.evaluate(generators, test_size, input_size, test_data, 'real_trained_classifier.pth')
     # new_classifier = classifier.train_classifier(generators, train_size, input_size)
     # torch.save(new_classifier.state_dict(), 'fake_trained_classifier.pth')
-    print("\nClassifying generated data using a classifier pretrained on real data")
+    print("\nClassifying generated data using a classifier pretrained on fake data")
     classifier.evaluate(generators, test_size, input_size, test_data, 'fake_trained_classifier.pth')
 
 if __name__ == "__main__":
