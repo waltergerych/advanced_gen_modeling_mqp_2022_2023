@@ -92,8 +92,15 @@ def train_model(generator, discriminator, generator_optimizer, discriminator_opt
         batch_size (int): size of training batch.
         ratio (int): the training ratio between generator and discriminator
     """
+    # initialize the state of the discriminator and generator at the beginning
+    discriminator.eval()
+    generator.train()
+
     # loop through the dataset multiple times
     for e in range(epoch):
+        # print epoch for progess update
+        if e % 500 == 0:
+            print(e)
         # randomize the samples
         rand_idx = np.random.permutation(true_x.size(0))
         rand_x, rand_y = true_x[rand_idx,:], true_y[rand_idx]
@@ -109,10 +116,6 @@ def train_model(generator, discriminator, generator_optimizer, discriminator_opt
             # generate a noise data from normal distribution
             noise = torch.randn(size=(batch_size, input_size)).float()
             generated_data = generator(noise)
-
-            # freeze the discriminator and unfreeze generator
-            discriminator.eval()
-            generator.train()
 
             # train the generator
             generator_optimizer.zero_grad()
@@ -137,3 +140,7 @@ def train_model(generator, discriminator, generator_optimizer, discriminator_opt
                 discriminator_loss = (true_discriminator_loss + generator_discriminator_loss)
                 discriminator_loss.backward()
                 discriminator_optimizer.step()
+
+                # freeze the discriminator and unfreeze generator
+                discriminator.eval()
+                generator.train()
