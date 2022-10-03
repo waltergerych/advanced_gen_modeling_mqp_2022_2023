@@ -56,8 +56,8 @@ def main():
             generators[i].eval()
 
             # save the model
-            torch.save(generators[i].state_dict(), f"./G{i}_model.pth")
-            torch.save(discriminators[i].state_dict(), f"./D{i}_model.pth")
+            torch.save(generators[i].state_dict(), f"./generator/G{i}_model.pth")
+            torch.save(discriminators[i].state_dict(), f"./discriminator/D{i}_model.pth")
     else:
         generators = []
         for i in classes:
