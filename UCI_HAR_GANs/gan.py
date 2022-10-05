@@ -144,3 +144,26 @@ def train_model(generator, discriminator, generator_optimizer, discriminator_opt
                 # freeze the discriminator and unfreeze generator
                 discriminator.eval()
                 generator.train()
+
+def generate_data(generators, batch_size, input_size):
+    """ Generates data using the given generators
+
+    Args:
+        generators (List<Generator>): the list of generators to be used to make the data
+        batch_size (int): the number of data instances to be created for each generator
+        input_size (int): the size of the noise to be used as input for the generator
+
+    Returns:
+        generated_x (torch.Tensor): the generated data in the x domain
+        generated_y (torch.Tensor): the generated label for the data
+    """
+    generated_data_x = []
+    generated_data_y = []
+    for i, generator in enumerate(generators):
+        noise = torch.randn(size=(batch_size, input_size)).float()
+        generated_data_x.append(generator(noise))
+        generated_data_y.append(torch.mul(torch.ones(batch_size), i))
+
+    generated_x, generated_y = torch.cat(generated_data_x), torch.cat(generated_data_y)
+
+    return generated_x, generated_y

@@ -1,7 +1,10 @@
+# Native libraries
+import sys
 # Internal libraries
 import utils
 import gan
 import classifier
+import visualize
 # External libraries
 import torch.optim as optim
 import torch.nn as nn
@@ -71,12 +74,19 @@ def main():
     test_size = 500
     train_size = 1000
 
-    print("\nClassifying generated data using a classifier pretrained on real data")
-    classifier.evaluate(generators, test_size, input_size, test_data, 'real_trained_classifier.pth')
+    # train a new classifier with the given generators
     # new_classifier = classifier.train_classifier(generators, train_size, input_size)
     # torch.save(new_classifier.state_dict(), 'fake_trained_classifier.pth')
-    print("\nClassifying generated data using a classifier pretrained on fake data")
-    classifier.evaluate(generators, test_size, input_size, test_data, 'fake_trained_classifier.pth')
+
+    # evaluate with classifiers
+    # print("\nClassifying generated data using a classifier pretrained on real data")
+    # classifier.evaluate(generators, test_size, input_size, test_data, 'real_trained_classifier.pth')
+    # print("\nClassifying generated data using a classifier pretrained on fake data")
+    # classifier.evaluate(generators, test_size, input_size, test_data, 'fake_trained_classifier.pth')
+
+    # visualize with histograms (currently only visualizing the walking class)
+    data_x, data_y = gan.generate_data([generators[0]], test_size, input_size)
+    visualize.make_histograms(data_x)
 
 if __name__ == "__main__":
     main()
