@@ -86,7 +86,8 @@ def main():
 
     # visualize with histograms (currently only visualizing the walking class)
     data_x, data_y = gan.generate_data([generators[0]], test_size, input_size)
-    visualize.make_histograms(data_x)
+    # visualize.make_histograms(data_x)
+    visualize.divergence(test_x, data_x)
 
 if __name__ == "__main__":
     main()
