@@ -4,6 +4,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import pandas as pd
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, classification_report
 
 class Classifier(nn.Module):
     """
@@ -49,6 +52,8 @@ def get_accuracy(model, data, labels, class_stats=False):
     classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
     correct_predictions = np.array([0, 0, 0, 0, 0, 0])
     total_predictions = np.array([0, 0, 0, 0, 0, 0])
+    total_confidence = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    total_guesses = np.array([0, 0, 0, 0, 0, 0])
 
     # run model without gradient calculation for better performance
     with torch.no_grad():
@@ -56,7 +61,7 @@ def get_accuracy(model, data, labels, class_stats=False):
         logits = model(data)
         outputs = F.softmax(logits, dim=1)
         # get the predicted result from the output of the model
-        _, predicted = torch.max(outputs.data, 1)
+        confidence, predicted = torch.max(outputs.data, 1)
         # get the number of correct guesses
         correct = (predicted == labels).sum().item()
         # calculate the percent correct
@@ -65,9 +70,11 @@ def get_accuracy(model, data, labels, class_stats=False):
         # if class statistics flag is set, calculate the accuracy for each class
         if class_stats:
             # for each truth-guess pair, increment the correct/total predictions
-            for truth, guess in zip(labels, predicted):
+            for truth, guess, conf in zip(labels, predicted, confidence):
                 correct_predictions[truth.item()] += 1 if truth == guess else 0
                 total_predictions[truth] += 1
+                total_confidence[guess] += conf.item()
+                total_guesses[guess] += 1
 
             # calculate the class accuracies
             class_acc = (correct_predictions / total_predictions)
@@ -76,7 +83,22 @@ def get_accuracy(model, data, labels, class_stats=False):
                 print(f"Class {classes[i]}:\t{class_acc[i]*100}%")
 
             # print out the accuracy
-            print(f"Accuracy of the model on testing set: {percent_correct*100}%")
+            print(f"Accuracy of the model on testing set: {percent_correct*100}%\n")
+
+            # calculate the average confidence of the guess in each class
+            class_conf = (total_confidence / total_guesses)
+            # print out the average confidence of each class
+            for i in range(len(classes)):
+                print(f"Confidence in class {classes[i]} guess:\t{class_conf[i]*100}%")
+
+            # show confusion matrix
+            confusion_matrix_df = pd.DataFrame(confusion_matrix(labels, predicted))
+            print("\nConfusion Matrix")
+            print(confusion_matrix_df)
+            sns.heatmap(confusion_matrix_df, annot=True)
+
+            # print classification report
+            print(classification_report(labels, predicted))
 
     return percent_correct
 
@@ -90,7 +112,7 @@ def evaluate(generators, batch_size, input_size, true_data, classifier_path):
         true_data: the true data to test on
         classifier_path: the path to the pytorch classifier model
     """
-    classifier = Classifier(561, 128)
+    classifier = Classifier(len(true_data[0][0]), input_size)
     classifier.load_state_dict(torch.load(classifier_path))
 
     generated_data_x = []
