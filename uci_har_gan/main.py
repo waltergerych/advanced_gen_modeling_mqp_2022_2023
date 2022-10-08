@@ -17,8 +17,8 @@ def main():
     training = False
 
     # load the datasets
-    train_x, train_y = utils.load_data('../UCI_HAR_Dataset', 'train')
-    test_x, test_y = utils.load_data('../UCI_HAR_Dataset', 'test')
+    train_x, train_y = utils.load_data('../dataset/UCI_HAR_Dataset', 'train')
+    test_x, test_y = utils.load_data('../dataset/UCI_HAR_Dataset', 'test')
 
     classes = [0, 1, 2, 3, 4, 5]
 
