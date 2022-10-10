@@ -3,7 +3,7 @@
 ## Content
 * [General Naming Convention](#general-naming-convention)
     * [File Names](#file-names)
-    * [Class Name](#class-names)
+    * [Class Names](#class-names)
     * [Global Variables](#global-variables)
     * [Local Variables](#local-variables)
 * [Directories and Files](#directories-and-files)
@@ -13,7 +13,7 @@
     * [General Formatting](#general-formatting)
         * [Imports](#imports)
         * [File Indentations](#file-indentations)
-        * [function Spacings](#function-spacings)
+        * [Function Spacings](#function-spacings)
     * [Main File](#main-file)
     * [Parsing File](#parsing-file)
     * [Class File](#class-file)
