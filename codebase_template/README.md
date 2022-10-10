@@ -3,8 +3,8 @@
 ## Content
 * [General Naming Convention](#general-naming-convention)
     * [File Names](#file-names)
-    * [Global Variable](#global-variable)
-    * [Local Variable](#local-variable)
+    * [Global Variables](#global-variables)
+    * [Local Variables](#local-variables)
 * [Directories and Files](#directories-and-files)
     * [Directory Structure](#directory-structure)
     * [General Formatting](#general-formatting)
