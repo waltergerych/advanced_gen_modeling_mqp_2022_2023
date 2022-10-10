@@ -29,7 +29,7 @@
 This section outlines the general naming convention that we will use in this codebase.
 
 ### File Names
-For file names, we will use a snake case with lowercase naming convention as follows:
+For file names, we will use a snake case with lowercase naming convention as follow:
 * `main.py`
 * `module.py`
 * `class.py`.
@@ -41,12 +41,12 @@ For class names, this is a special case where we will not use a snake case but r
 * `MultiWordClassName`
 
 ### Global Variables
-For global variables, we will use a snake case with uppercase naming convention as follows:
+For global variables, we will use a snake case with uppercase naming convention as follow:
 * `VAR`
 * `MULTI_WORD_VAR`
 
 ### Local Variables
-For the local variables, we will use a snake case with lowercase naming convention as follows:
+For the local variables, we will use a snake case with lowercase naming convention as follow:
 * `var`
 * `multi_word_var`
 
@@ -58,7 +58,7 @@ This section outlines the directory and file structures.
 For the directory structure, we will split our organization into two categories:
 
 #### Small Projects
-For the small project, we will leave all the python files within the main directory as follows:
+For the small project, we will leave all the python files within the main directory as follow:
 ```
 small_project
 ├── .gitignore
@@ -71,7 +71,7 @@ small_project
 ```
 
 #### Large Projects
-For the large project, we will divide files into source code directory `src` and testing code directory `tst`. The structure is as follows:
+For the large project, we will divide files into source code directory `src` and testing code directory `tst`. The structure is as follow:
 ```
 large_project
 ├── .gitignore
