@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report
 
 class Classifier(nn.Module):
@@ -96,6 +97,7 @@ def get_accuracy(model, data, labels, class_stats=False):
             print("\nConfusion Matrix")
             print(confusion_matrix_df)
             sns.heatmap(confusion_matrix_df, annot=True)
+            plt.show()
 
             # print classification report
             print(classification_report(labels, predicted))

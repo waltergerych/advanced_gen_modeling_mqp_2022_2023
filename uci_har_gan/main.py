@@ -80,9 +80,9 @@ def main():
 
     # evaluate with classifiers
     print("\nClassifying generated data using a classifier pretrained on real data")
-    classifier.evaluate(generators, test_size, input_size, test_data, 'real_trained_classifier.pth')
-    # print("\nClassifying generated data using a classifier pretrained on fake data")
-    # classifier.evaluate(generators, test_size, input_size, test_data, 'fake_trained_classifier.pth')
+    classifier.evaluate(generators, test_size, input_size, test_data, './classifier/real_trained_classifier.pth')
+    print("\nClassifying generated data using a classifier pretrained on fake data")
+    classifier.evaluate(generators, test_size, input_size, test_data, './classifier/fake_trained_classifier.pth')
 
     # visualize with histograms (currently only visualizing the walking class)
     # data_x, data_y = gan.generate_data([generators[0]], test_size, input_size)
