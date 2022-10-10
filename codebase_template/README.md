@@ -33,6 +33,7 @@ For file names, we will use a snake case with lowercase naming convention as fol
 * `main.py`
 * `module.py`
 * `class.py`.
+* `multi_word_file.py`
 
 ### Class Names
 For class names, this is a special case where we will not use a snake case but rather an upper camel case.
