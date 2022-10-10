@@ -170,7 +170,7 @@ def second_function(param1, param2):
 ### Main File
 This section outlines the template for `main.py` file.
 To keep the code clean and concise, we will only include the main part of the script in the main function.
-This will include only `if __name__ == '__main__':` statement and `def main()` function.
+This file will include only `if __name__ == '__main__':` statement and `def main()` function.
 Generally, we would like to modularize our python files, however, since argument parsing and main functions are closely related, we will put out argument parsing function in `main.py` as well.
 
 Example:
