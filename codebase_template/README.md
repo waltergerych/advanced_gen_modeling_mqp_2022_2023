@@ -74,9 +74,9 @@ large_project
 │   ├── utils.py
 │   └── vars.py
 └── tst
-├── class_test.py
-├── module_test.py
-└── utils_test.py
+    ├── class_test.py
+    ├── module_test.py
+    └── utils_test.py
 ```
 
 ### General Formatting
