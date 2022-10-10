@@ -93,13 +93,13 @@ This section outline the general formatting that will be used in each python fil
 #### Imports
 All imports will be listed at the top of each python files.
 When sourcing native, internal and external libraries, we will organize them listing all native imports follow by internal imports and then external imports.
-Each section will be ordered alphabetically Each section will be ordered alphabetically.
+Each section will be ordered alphabetically.
 
 * Generally, we will first list all `import` statements before `from _ import _` statements.
 * Native imports: These imports are shipped along with the python interpreter. This includes packages such as `argparse`, `os`, `sys`, etc.
-* Internal imports: These imports are our private library sourced from local files. This includes modules and class.
+* Internal imports: These imports are our private library sourced from local files. This includes module and class files.
     * For small projects, these will be import normally as `import class` or `import module`.
-    * For large projects, these will have to be sources with path as such `from src.class import class` or `from src.module import module`.
+    * For large projects, these will have to be sources with path as such `from src.class import class` or `import src.module as module`.
 * External imports: These imports are external libraries that we download. This includes packages such as `numpy`, `pandas`, `torch`.
 
 Note: Please refrain from importing files by doing `from file import *`. This is to negate any variable naming conflict and keep with best practices.
@@ -113,8 +113,8 @@ import sys
 # Internal libraries
 import class
 import module
+import src.module as module
 from src.class import class
-from src.module import module
 # External libraries
 import numpy as np
 import pandas as pd
@@ -124,7 +124,7 @@ from torch import nn
 ```
 
 #### File Indentations
-To keep the same convention throughout our codebase, we will use 4-spaces indentation convention
+To keep the same convention throughout our codebase, we will use 4-spaces indentation convention.
 
 Example:
 ```python
@@ -169,11 +169,12 @@ def second_function(param1, param2):
 
 ### Main File
 This section outlines the template for `main.py` file.
-To keep the code clean and concise, we will only include the main part of the script in the main function.
 This file will include only `if __name__ == '__main__':` statement and `def main()` function.
-Generally, we would like to modularize our python files, however, since argument parsing and main functions are closely related, we will put out argument parsing function in `main.py` as well.
+Generally, we would like to modularize our python files, however, since argument parsing and main functions are closely related,
+we will put out argument parsing function in `main.py` as well.
 
 Example:
+##### With Argument Parsing
 ```python
 # Native libraries
 import argparse
@@ -203,6 +204,18 @@ def handle_arguments():
     arguments = parser.parse_args()
 
     return arguments
+
+
+if __init__ == '__main__':
+    main()
+```
+
+##### Without Argument Parsing
+```python
+def main():
+    """[TODO:description]
+    """
+    args = handle_arguments()
 
 
 if __init__ == '__main__':
@@ -241,7 +254,7 @@ def handle_arguments():
 
 ### Class File
 This section outlines the template for `class.py` file that will be used for python classes.
-In each python classes, we will require a docstrings for each class and their class methods.
+In each python classes, we will require a docstrings for the class and their class methods.
 
 Example:
 ```python
@@ -262,7 +275,7 @@ class ExampleClass():
 ### Module File
 This section outlines the template for `module.py` file that will be used to any addition python functions.
 We define module as any group of functions that relate to each other.
-For example, if a multiple functions are used to evaluated a GAN performance, we can put them all in `evaluate.py`.
+For example, if a multiple functions are used to evaluated GAN performances, we can put them all in `evaluate.py`.
 Utility functions that do not fit anywhere can be put into `utils.py`. In which case, the structure of said file will also follow this section structure.
 
 Example:
@@ -296,9 +309,9 @@ def module_function2(param):
 ```
 
 ### Variable File
-This section  outlines the template for `vars.py` file that will be used to store all global variables.
+This section outlines the template for `vars.py` file that will be used to store all global variables.
 Although we don't often use global variables in python, if we do require them, we will store all of them in `vars.py`.
-To reference global variables, you will have to `import vars` in your python file and reference them by doing `vars.YOUR_VARIABLE`
+To reference global variables, you will have to `import vars` in your python file and reference them by doing `vars.GLOBAL_VARIABLE`
 
 Note: Please refrain from importing variable files by doing `from vars import *`. This is to negate any variable naming conflict and keep with best practices.
 
