@@ -333,7 +333,7 @@ Example:
 
 # ERROR: This is to indicate that there is a known error at the current section of the code.
 
-# HACK: This is to indicate any weird hack that you've done but may not tally understand why. Just a warning if the code breaks, this may be it.
+# HACK: This is to indicate any weird hack that you've done but may not totally understand why. Just a warning if the code breaks, this may be it.
 
 # PERF: This is to indicate that the currently code block is fully optimized. Rarely used but the more the merrier I guess.
 ```
@@ -370,6 +370,7 @@ def func_without_return(param):
         param ([TODO:parameter]): [TODO:description]
     """
     pass
+
 
 def func_with_arg_and_return(param):
     """[TODO:description]
