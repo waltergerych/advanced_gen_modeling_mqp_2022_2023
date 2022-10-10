@@ -241,7 +241,7 @@ def handle_arguments():
 
 ### Class File
 This section outlines the template for `class.py` file that will be used for python classes.
-In each python classes, we will require a doctrings for each class and their class methods.
+In each python classes, we will require a docstrings for each class and their class methods.
 
 Example:
 ```python
@@ -315,11 +315,11 @@ GLOBAL_LIST = []
 
 
 ## Function Structure
-This section outlines the template for function structures. This includes comments and docstring conventions.
+This section outlines the template for function structures. This includes comments and docstrings conventions.
 
 ### Comments
 For comments, try your best to comment each block of code with what that block does at a high level.
-If there is any oneline list comprehension or lambda functions, please explain what that line does as clear as possible.
+If there is any oneliner list comprehension or lambda functions, please explain what that line does as clear as possible.
 Moreover, please make use of any comment tags such as `NOTE:`, `TODO:`. `WARNING:`, `ERROR:`, `HACK:`, `PERF:` etc. whenever possible.
 This is not required but it would be nice if there is a certain note you'd like to tell another person who willl be reading the code later on.
 
@@ -327,7 +327,7 @@ Example:
 ```python
 # NOTE: This is to write a short note about the function, code, or any complicated oneliner.
 
-# TODO: This is to temporally indicate that there is something that needs to be done here later.
+# TODO: This is to temporarily indicate that there is something that needs to be done here later.
 
 # WARNING: This is to warn someone of an expected or unexpected behaviors. Try your best to fix these if possible.
 
