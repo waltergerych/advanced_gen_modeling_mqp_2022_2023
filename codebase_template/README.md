@@ -199,7 +199,7 @@ def handle_arguments():
                         action='store',
                         required=False,
                         choices=["choice1", "choice2"],
-                        default=DEFAULT_LOG_LEVEL,
+                        default=DEFAULT_ARG,
                         help='Logging verbosity. Default: %(default)s')
 
     arguments = parser.parse_args()
