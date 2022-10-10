@@ -16,74 +16,73 @@
 * [Function Structure](#function-structure)
 * [Additional Resources](#additional-resources)
 
------------
 
-### General Naming Convention
+## General Naming Convention
 This section outlines the general naming convention that we will use in this codebase.
 
-#### File Names
+### File Names
 For file names, we will use a snake case with lowercase naming convention as follow:
 * `main.py`
 * `module.py`
 * `class.py`.
 
-#### Class Names
+### Class Names
 For class names, this is a special case where we will not use a snake case but rather an upper camel case.
 * `Name`
 * `MultiWordClassName`
 
-#### Global Variables
+### Global Variables
 For global variables, we will use a snake case with uppercase naming convention as follow:
 * `VAR`
 * `MULTI_WORD_VAR`
 
-#### Local Variables
+### Local Variables
 For the local variables, we will use a snake case with lowercase naming convention as follow:
 * `var`
 * `multi_word_var`
 
-----------
 
-### Directories and Files
+## Directories and Files
 This section outlines the directory and file structures.
 
-#### Directory Structure
+### Directory Structure
 For the directory structure, we will split our organization into two categories:
 
-##### Small Projects
-    * For the small project, we will leave all the python files within the main directory as follow:
-    ```
-    small_project
-    ├── .gitignore
-    ├── README.md
-    ├── class.py
-    ├── main.py
-    ├── module.py
-    ├── utils.py
-    └── vars.py
-    ```
-##### Large Projects
-    * For the large project, we will divide files into source code directory `src` and testing code directory `tst`. The structure is as follow:
-    ```
-    large_project
-    ├── .gitignore
-    ├── README.md
-    ├── src
-    │   ├── class.py
-    │   ├── main.py
-    │   ├── module.py
-    │   ├── utils.py
-    │   └── vars.py
-    └── tst
-        ├── class_test.py
-        ├── module_test.py
-        └── utils_test.py
-    ```
+#### Small Projects
+For the small project, we will leave all the python files within the main directory as follow:
+```
+small_project
+├── .gitignore
+├── README.md
+├── class.py
+├── main.py
+├── module.py
+├── utils.py
+└── vars.py
+```
 
-#### General Formatting
+#### Large Projects
+For the large project, we will divide files into source code directory `src` and testing code directory `tst`. The structure is as follow:
+```
+large_project
+├── .gitignore
+├── README.md
+├── src
+│   ├── class.py
+│   ├── main.py
+│   ├── module.py
+│   ├── utils.py
+│   └── vars.py
+└── tst
+├── class_test.py
+├── module_test.py
+└── utils_test.py
+```
+
+### General Formatting
 This section outline the general formatting that will be used in each python files.
 
-##### Imports
+#### Imports
 All imports will be listed at the top of each python files.
 When sourcing native, internal and external libraries, we will organize them listing all native imports follow by internal imports and then external imports.
 Each section will be ordered alphabetically Each section will be ordered alphabetically.
@@ -116,7 +115,7 @@ import torch.optim as optim
 from torch import nn
 ```
 
-##### File Indentations
+#### File Indentations
 To keep the same convention throughout our codebase, we will use 4-spaces indentation convention
 
 Example:
@@ -135,7 +134,7 @@ def some_function(param):
       print(i)
 ```
 
-##### Function Spacings
+#### Function Spacings
 To make the code cleaner and easier to read, at the end of each function, leave two blank lines before starting defining a new function.
 
 Example:
@@ -160,7 +159,7 @@ def second_function(param1, param2):
     pass
 ```
 
-#### Main File
+### Main File
 This section outlines the template for `main.py` file.
 To keep the code clean and concise, we will only include the main part of the script in the main function.
 This will include only `if __name__ == '__main__':` statement and `def main()` function.
@@ -202,7 +201,7 @@ if __init__ == '__main__':
     main()
 ```
 
-#### Parsing File
+### Parsing File
 This section outlines the template for `parsing.py` file that will be used specifically for argument parsing.
 If our argument parsing method require more custom argument handling function, we will put them in `parsing.py` as opposed to `main.py`.
 
@@ -232,7 +231,7 @@ def handle_arguments():
     return arguments
 ```
 
-#### Class File
+### Class File
 This section outlines the template for `class.py` file that will be used for python classes.
 In each python classes, we will require a doctrings for each class and their class methods.
 
@@ -252,7 +251,7 @@ class ExampleClass():
         pass
 ```
 
-#### Module File
+### Module File
 This section outlines the template for `module.py` file that will be used to any addition python functions.
 We define module as any group of functions that relate to each other.
 For example, if a multiple functions are used to evaluated a GAN performance, we can put them all in `evaluate.py`.
@@ -261,20 +260,13 @@ Utility functions that do not fit anywhere can be put into `utils.py`. In which 
 Example:
 ```python
 # Native libraries
-import argparse
 import os
-import sys
 # Internal libraries
-import class
-import module
-from src.class import class
-from src.module import module
+import vars
 # External libraries
 import numpy as np
 import pandas as pd
 import torch
-import torch.optim as optim
-from torch import nn
 
 
 def module_function1(param):
@@ -295,7 +287,7 @@ def module_function2(param):
     pass
 ```
 
-#### Variable File
+### Variable File
 This section  outlines the template for `vars.py` file that will be used to store all global variables.
 Although we don't often use global variables in python, if we do require them, we will store all of them in `vars.py`.
 To reference global variables, you will have to `import vars` in your python file and reference them by doing `vars.YOUR_VARIABLE`
@@ -313,12 +305,11 @@ GLOBAL_NUMBER = 1
 GLOBAL_LIST = []
 ```
 
-----------
 
-### Function Structure
+## Function Structure
 This section outlines the template for function structures. This includes comments and docstring conventions.
 
-#### Comments
+### Comments
 For comments, try your best to comment each block of code with what that block does at a high level.
 If there is any oneline list comprehension or lambda functions, please explain what that line does as clear as possible.
 Moreover, please make use of any comment tags such as `NOTE:`, `TODO:`. `WARNING:`, `ERROR:`, `HACK:`, `PERF:` etc. whenever possible.
@@ -339,7 +330,7 @@ Example:
 # PERF: This is to indicate that the currently code block is fully optimized. Rarely used but the more the merrier I guess.
 ```
 
-#### Docstrings
+### Docstrings
 Since our project utilizes a lot of external libraries such as pytorch, we will not include static typing into python functions.
 Rather, we will declare our types in the docstrings of each function. You are responsible to correctly indicate the type of each variable in the docstrings.
 For our docstrings, we will utilize [google docstring](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html) convention.
@@ -413,8 +404,8 @@ def func_with_mulitple_return(param):
 
     return arr0, arr1
 ```
-----------
 
-### Additional Resources
+
+## Additional Resources
 Most of these conventions are taken from official best practices in the industry.
 The formatting of the file can be automatically done with [autopep8](https://pypi.org/project/autopep8/) or [black](https://pypi.org/project/black/).
