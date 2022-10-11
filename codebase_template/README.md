@@ -136,10 +136,10 @@ def some_function(arg1):
         arg1 ([TODO:parameter]): [TODO:description]
     """
     # some comments
-    arr = arg1.to_list()
+    val1 = arg1.to_list()
 
     # more comments
-    for i in arr:
+    for i in val1:
       print(i)
 ```
 
@@ -393,12 +393,12 @@ def func_with_arg_and_return(arg1):
         arg1 ([TODO:parameter]): [TODO:description]
 
     Returns:
-        arr ([TODO:return]): [TODO:description]
+        val1 ([TODO:return]): [TODO:description]
     """
     # initialize variables
-    arr = arg1[0]
+    val1 = arg1[0]
 
-    return arr
+    return val1
 
 
 def func_with_multiple_arg(arg1, arg2):
@@ -418,14 +418,14 @@ def func_with_mulitple_return(arg1):
         arg1 ([TODO:parameter]): [TODO:description]
 
     Returns:
-        arr0 ([TODO:return]): [TODO:description]
-        arr1 ([TODO:return]): [TODO:description]
+        val1 ([TODO:return]): [TODO:description]
+        val2 ([TODO:return]): [TODO:description]
     """
     # initialize variables
-    arr0 = arg1[0]
-    arr1 = arg1[1]
+    val1 = arg1[0]
+    val2 = arg1[1]
 
-    return arr0, arr1
+    return val1, val2
 ```
 
 
