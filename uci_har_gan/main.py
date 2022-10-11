@@ -79,18 +79,19 @@ def main():
     # torch.save(new_classifier.state_dict(), 'fake_trained_classifier.pth')
 
     # evaluate with classifiers
-    print("\nClassifying generated data using a classifier pretrained on real data")
-    classifier.evaluate(generators, test_size, input_size, test_data, './classifier/real_trained_classifier.pth')
-    print("\nClassifying generated data using a classifier pretrained on fake data")
-    classifier.evaluate(generators, test_size, input_size, test_data, './classifier/fake_trained_classifier.pth')
+    # print("\nClassifying generated data using a classifier pretrained on real data")
+    # classifier.evaluate(generators, test_size, input_size, test_data, './classifier/real_trained_classifier.pth')
+    # print("\nClassifying generated data using a classifier pretrained on fake data")
+    # classifier.evaluate(generators, test_size, input_size, test_data, './classifier/fake_trained_classifier.pth')
 
     # visualize with histograms (currently only visualizing the walking class)
     # data_x, data_y = gan.generate_data([generators[0]], test_size, input_size)
     # visualize.make_histograms(data_x)
     # visualize.divergence(test_x, data_x)
 
-
-    # visualize.perform_pca(data_x)
+    # generate data from all classes
+    data_x, data_y = gan.generate_data(generators, test_size, input_size)
+    visualize.perform_pca(test_x, data_x)
 
 if __name__ == "__main__":
     main()
