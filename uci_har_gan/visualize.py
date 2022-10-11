@@ -2,49 +2,44 @@
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from scipy.special import rel_entr
 from scipy.spatial import distance
 from sklearn.decomposition import PCA
 
 # was referencing https://towardsdatascience.com/pca-using-python-scikit-learn-e653f8989e60
 # need change param
-def perform_pca(data):
-    """ Perform a principal component analysis (PCA) for each 
+def perform_pca(real, fake):
+    """ Perform a principal component analysis (PCA) on the data and visualize on a 2D plane
 
     Args:
-        data (torch.Tensor): the data to run PCA testing on
+        real (torch.Tensor): the real data for pca
+        fake (torch.Tensor): the generated data for pca
 
     Returns:
         None
     """
+    labels = np.concatenate((np.ones(len(real)), np.zeros(len(fake))))
 
-    # fig = plt.figure(figsize = (8,8))
-    # ax = fig.add_subplot(1,1,1) 
-    # ax.set_xlabel('Principal Component 1', fontsize = 15)
-    # ax.set_ylabel('Principal Component 2', fontsize = 15)
-    # ax.set_title('2 component PCA', fontsize = 20)
-    # targets = ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica']
-    # colors = ['r', 'g', 'b']
-    # for target, color in zip(targets,colors):
-    #     indicesToKeep = finalDf['target'] == target
-    #     ax.scatter(finalDf.loc[indicesToKeep, 'principal component 1']
-    #             , finalDf.loc[indicesToKeep, 'principal component 2']
-    #             , c = color
-    #             , s = 50)
-    # ax.legend(targets)
-    # ax.grid()
+    data = torch.cat((real, fake), 0)
 
-    # standardize data
-    pca = PCA(n_components=6)
-    pca.fit(data)
+    pca = PCA(n_components=2)
+    components = pca.fit_transform(data.detach().numpy())
 
     # PCA projection to 2D
+    df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
 
     # visualize the 2D
+    plt.figure(figsize = (8,8))
+    plt.scatter(df['PC1'], df['PC2'], c=labels, label=labels, alpha=.5)
+    plt.legend(['Real', 'Fake'])
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.title("PCA with Real and Fake Data")
+    plt.show()
 
-    #
-    print(pca.explained_variance_ratio_)
-    print(pca.singular_values_)
+    print("Explained variance ratio: " + str(pca.explained_variance_ratio_))
+    print("Singular values: " + str(pca.singular_values_))
 
 
 def make_histograms(data):
