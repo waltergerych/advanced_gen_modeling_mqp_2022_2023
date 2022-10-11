@@ -129,14 +129,14 @@ To keep the same convention throughout our codebase, we will use 4-spaces indent
 
 Example:
 ```python
-def some_function(param):
+def some_function(arg1):
     """[TODO:description]
 
     Args:
-        param ([TODO:parameter]): [TODO:description]
+        arg1 ([TODO:parameter]): [TODO:description]
     """
     # some comments
-    arr = param.to_list()
+    arr = arg1.to_list()
 
     # more comments
     for i in arr:
@@ -148,22 +148,22 @@ To make the code cleaner and easier to read, at the end of each function, leave 
 
 Example:
 ```python
-def first_function(param1, param2):
+def first_function(arg1, arg2):
     """[TODO:description]
 
     Args:
-        param1 ([TODO:parameter]): [TODO:description]
-        param2 ([TODO:parameter]): [TODO:description]
+        arg1 ([TODO:parameter]): [TODO:description]
+        arg2 ([TODO:parameter]): [TODO:description]
     """
     pass
 
 
-def second_function(param1, param2):
+def second_function(arg1, arg2):
     """[TODO:description]
 
     Args:
-        param1 ([TODO:parameter]): [TODO:description]
-        param2 ([TODO:parameter]): [TODO:description]
+        arg1 ([TODO:parameter]): [TODO:description]
+        arg2 ([TODO:parameter]): [TODO:description]
     """
     pass
 ```
@@ -264,11 +264,11 @@ class ExampleClass():
     """
 
 
-    def class_method(param):
+    def class_method(arg1):
         """[TODO:description]
 
         Args:
-            param ([TODO:parameter]): [TODO:description]
+            arg1 ([TODO:parameter]): [TODO:description]
         """
         pass
 ```
@@ -291,20 +291,20 @@ import pandas as pd
 import torch
 
 
-def module_function1(param):
+def module_function1(arg1):
     """[TODO:description]
 
     Args:
-        param ([TODO:parameter]): [TODO:description]
+        arg1 ([TODO:parameter]): [TODO:description]
     """
     pass
 
 
-def module_function2(param):
+def module_function2(arg1):
     """[TODO:description]
 
     Args:
-        param ([TODO:parameter]): [TODO:description]
+        arg1 ([TODO:parameter]): [TODO:description]
     """
     pass
 ```
@@ -377,53 +377,53 @@ def func_without_arg():
     return result
 
 
-def func_without_return(param):
+def func_without_return(arg1):
     """[TODO:description]
 
     Args:
-        param ([TODO:parameter]): [TODO:description]
+        arg1 ([TODO:parameter]): [TODO:description]
     """
     pass
 
 
-def func_with_arg_and_return(param):
+def func_with_arg_and_return(arg1):
     """[TODO:description]
 
     Args:
-        param ([TODO:parameter]): [TODO:description]
+        arg1 ([TODO:parameter]): [TODO:description]
 
     Returns:
         arr ([TODO:return]): [TODO:description]
     """
     # initialize variables
-    arr = param[0]
+    arr = arg1[0]
 
     return arr
 
 
-def func_with_multiple_arg(param1, param2):
+def func_with_multiple_arg(arg1, arg2):
     """[TODO:description]
 
     Args:
-        param1 ([TODO:parameter]): [TODO:description]
-        param2 ([TODO:parameter]): [TODO:description]
+        arg1 ([TODO:parameter]): [TODO:description]
+        arg2 ([TODO:parameter]): [TODO:description]
     """
     pass
 
 
-def func_with_mulitple_return(param):
+def func_with_mulitple_return(arg1):
     """[TODO:description]
 
     Args:
-        param ([TODO:parameter]): [TODO:description]
+        arg1 ([TODO:parameter]): [TODO:description]
 
     Returns:
         arr0 ([TODO:return]): [TODO:description]
         arr1 ([TODO:return]): [TODO:description]
     """
     # initialize variables
-    arr0 = param[0]
-    arr1 = param[1]
+    arr0 = arg1[0]
+    arr1 = arg1[1]
 
     return arr0, arr1
 ```
