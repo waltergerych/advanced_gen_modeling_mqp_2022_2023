@@ -4,6 +4,48 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import rel_entr
 from scipy.spatial import distance
+from sklearn.decomposition import PCA
+
+# was referencing https://towardsdatascience.com/pca-using-python-scikit-learn-e653f8989e60
+# need change param
+def perform_pca(data):
+    """ Perform a principal component analysis (PCA) for each 
+
+    Args:
+        data (torch.Tensor): the data to run PCA testing on
+
+    Returns:
+        None
+    """
+
+    # fig = plt.figure(figsize = (8,8))
+    # ax = fig.add_subplot(1,1,1) 
+    # ax.set_xlabel('Principal Component 1', fontsize = 15)
+    # ax.set_ylabel('Principal Component 2', fontsize = 15)
+    # ax.set_title('2 component PCA', fontsize = 20)
+    # targets = ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica']
+    # colors = ['r', 'g', 'b']
+    # for target, color in zip(targets,colors):
+    #     indicesToKeep = finalDf['target'] == target
+    #     ax.scatter(finalDf.loc[indicesToKeep, 'principal component 1']
+    #             , finalDf.loc[indicesToKeep, 'principal component 2']
+    #             , c = color
+    #             , s = 50)
+    # ax.legend(targets)
+    # ax.grid()
+
+    # standardize data
+    pca = PCA(n_components=6)
+    pca.fit(data)
+
+    # PCA projection to 2D
+
+    # visualize the 2D
+
+    #
+    print(pca.explained_variance_ratio_)
+    print(pca.singular_values_)
+
 
 def make_histograms(data):
     """ Make a histogram for every feature in the provided data set and save in a folder
@@ -25,6 +67,7 @@ def make_histograms(data):
         plt.xlabel('Bins')
         plt.ylabel('Frequency')
         # plt.savefig(f'./histograms/fake/{col}.png')
+
 
 def divergence(real, fake):
     """ Calculates the Kullback-Leibler (KL) Divergence score and the Jenson-Shannon (JS) 

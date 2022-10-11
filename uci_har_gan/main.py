@@ -89,5 +89,8 @@ def main():
     # visualize.make_histograms(data_x)
     # visualize.divergence(test_x, data_x)
 
+
+    # visualize.perform_pca(data_x)
+
 if __name__ == "__main__":
     main()
