@@ -216,7 +216,7 @@ if __init__ == '__main__':
 def main():
     """[TODO:description]
     """
-    args = handle_arguments()
+    pass
 
 
 if __init__ == '__main__':
