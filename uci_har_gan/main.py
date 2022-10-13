@@ -91,33 +91,33 @@ def main():
 
 
     # train a logistic regression model to tell real and fake data apart
-    logistic_regression_model = LogisticRegression()
-    # generate fake data
-    fake_data, _ = gan.generate_data(generators, train_size, input_size)
+    # logistic_regression_model = LogisticRegression()
+    # # generate fake data
+    # fake_data, _ = gan.generate_data(generators, train_size, input_size)
     
-    # get data and labels for train test split
-    all_data, all_labels = generate_data_and_labels(fake_data, train_x)
+    # # get data and labels for train test split
+    # all_data, all_labels = generate_data_and_labels(fake_data, train_x)
 
-    # generate train test split (70/30 split)
-    X_train, X_test, y_train, y_test = train_test_split(all_data, all_labels, test_size=0.3, stratify=all_labels)
+    # # generate train test split (70/30 split)
+    # X_train, X_test, y_train, y_test = train_test_split(all_data, all_labels, test_size=0.3, stratify=all_labels)
 
-    # get accuracy, precision, and recall of the model
-    accuracy, precision, recall = train_regression_model(logistic_regression_model, X_train, y_train, X_test, y_test)
-    print("Logistic Regression Model Stats:")
-    print(f"Accuracy: {accuracy}")
-    print(f"Precision: {precision}")
-    print(f"Recall: {recall}")
+    # # get accuracy, precision, and recall of the model
+    # accuracy, precision, recall = train_regression_model(logistic_regression_model, X_train, y_train, X_test, y_test)
+    # print("Logistic Regression Model Stats:")
+    # print(f"Accuracy: {accuracy}")
+    # print(f"Precision: {precision}")
+    # print(f"Recall: {recall}")
     
 
 
     # visualize with histograms (currently only visualizing the walking class)
     # data_x, data_y = gan.generate_data([generators[0]], test_size, input_size)
     # visualize.make_histograms(data_x)
-    # visualize.divergence(test_x, data_x)
 
     # generate data from all classes
     data_x, data_y = gan.generate_data(generators, test_size, input_size)
-    visualize.perform_pca(test_x, data_x)
+    visualize.divergence(test_x, test_y, data_x, data_y)
+    # visualize.perform_pca(test_x, data_x)
 
 if __name__ == "__main__":
     main()
