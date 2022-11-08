@@ -11,38 +11,55 @@ from model import ConditionalModel
 from ema import EMA
 import torch.optim as optim
 
-hdr_plot_style()
-swiss_roll, _ = make_swiss_roll(10**4,noise=0.1)
-swiss_roll = swiss_roll[:, [0, 2]]/10.0
+# hdr_plot_style()
+# swiss_roll, _ = make_swiss_roll(10**4,noise=0.1)
+# swiss_roll = swiss_roll[:, [0, 2]]/10.0
 
-s_curve, _= make_s_curve(10**4, noise=0.1)
-s_curve = s_curve[:, [0, 2]]/10.0
+# s_curve, _= make_s_curve(10**4, noise=0.1)
+# s_curve = s_curve[:, [0, 2]]/10.0
 
-moons, _ = make_moons(10**4, noise=0.1)
+# moons, _ = make_moons(10**4, noise=0.1)
 
-data = s_curve.T
-dataset = torch.Tensor(data.T).float()
-
-
-fig,axes = plt.subplots(1,3,figsize=(20,5))
-
-axes[0].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=5);
-axes[0].axis('off')
-
-data = swiss_roll.T
-axes[1].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=5);
-axes[1].axis('off')
-#dataset = torch.Tensor(data.T).float()
-
-data = moons.T
-axes[2].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=3);
-axes[2].axis('off')
+# data = s_curve.T
 # dataset = torch.Tensor(data.T).float()
+
+
+# fig,axes = plt.subplots(1,3,figsize=(20,5))
+
+# axes[0].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=5)
+# axes[0].axis('off')
+
+# data = swiss_roll.T
+# axes[1].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=5)
+# axes[1].axis('off')
+# #dataset = torch.Tensor(data.T).float()
+
+# data = moons.T
+# axes[2].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=3)
+# axes[2].axis('off')
+# # dataset = torch.Tensor(data.T).float()
+# plt.show()
+
+# load the datasets
+train_x, train_y = load_data('../../dataset/UCI_HAR_Dataset', 'train')
+test_x, test_y = load_data('../../dataset/UCI_HAR_Dataset', 'test')
+
+classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
+
+train_x = train_x[:, :2]
+labels = train_y
+test_x = test_x[:, :2]
+
+x, y = train_x[:, 0], train_x[:, 1]
+dataset = torch.stack((x, y), dim=-1)
+
+fig, ax = plt.subplots()
+scatter = plt.scatter(x, y, c=labels, alpha=.8, marker='.')
+plt.legend(handles=scatter.legend_elements()[0], labels=classes)
 plt.show()
 
 
 num_steps = 100
-#betas = torch.tensor([1.7e-5] * num_steps)
 betas = make_beta_schedule(schedule='sigmoid', n_timesteps=num_steps, start=1e-5, end=0.5e-2)
 
 alphas = 1 - betas
@@ -52,7 +69,7 @@ alphas_bar_sqrt = torch.sqrt(alphas_prod)
 one_minus_alphas_bar_log = torch.log(1 - alphas_prod)
 one_minus_alphas_bar_sqrt = torch.sqrt(1 - alphas_prod)
 
-
+# Add t time steps of noise to the data x
 def q_x(x_0, t, noise=None):
     if noise is None:
         noise = torch.randn_like(x_0)
@@ -60,15 +77,17 @@ def q_x(x_0, t, noise=None):
     alphas_1_m_t = extract(one_minus_alphas_bar_sqrt, t, x_0)
     return (alphas_t * x_0 + alphas_1_m_t * noise)
 
-
+# Visualize the forward process
 fig, axs = plt.subplots(1, 10, figsize=(28, 3))
 for i in range(10):
     q_i = q_x(dataset, torch.tensor([i * 10]))
-    axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5);
-    axs[i].set_axis_off(); axs[i].set_title('$q(\mathbf{x}_{'+str(i*10)+'})$')
+    axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
+    axs[i].set_axis_off()
+    axs[i].set_title('$q(\mathbf{x}_{'+str(i*10)+'})$')
 plt.show()
 
-
+# Used to calculate the mean and variance of the data.  Can be used to assess how close the data is to
+# the normal distribution (all noise) 
 posterior_mean_coef_1 = (betas * torch.sqrt(alphas_prod_p) / (1 - alphas_prod))
 posterior_mean_coef_2 = ((1 - alphas_prod_p) * torch.sqrt(alphas) / (1 - alphas_prod))
 posterior_variance = betas * (1 - alphas_prod_p) / (1 - alphas_prod)
@@ -99,7 +118,7 @@ for t in range(1000):
         # Retrieve current batch
         indices = permutation[i:i+batch_size]
         batch_x = dataset[indices]
-        # Compute the loss.
+        # Compute the loss
         loss = noise_estimation_loss(model, batch_x,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,num_steps)
         # Before the backward pass, zero all of the network gradients
         optimizer.zero_grad()
@@ -112,13 +131,13 @@ for t in range(1000):
         # Update the exponential moving average
         ema.update(model)
     # Print loss
-    if (t % 100 == 0):
+    if (t % num_steps == 0):
         print(loss)
         x_seq = p_sample_loop(model, dataset.shape,num_steps,alphas,betas,one_minus_alphas_bar_sqrt)
         fig, axs = plt.subplots(1, 10, figsize=(28, 3))
         for i in range(1, 11):
             cur_x = x_seq[i * 10].detach()
-            axs[i-1].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5);
-            axs[i-1].set_axis_off(); 
-            axs[i-1].set_title('$q(\mathbf{x}_{'+str(i*100)+'})$')
+            axs[i-1].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
+            axs[i-1].set_axis_off()
+            axs[i-1].set_title('$q(\mathbf{x}_{'+str((11-i)*num_steps)+'})$')
 plt.show()
