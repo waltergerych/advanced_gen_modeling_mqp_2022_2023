@@ -5,11 +5,12 @@ import numpy as np
 from sklearn.datasets import make_checkerboard,make_circles,make_moons,make_s_curve,make_swiss_roll
 from helper_plot import hdr_plot_style
 import torch
+import torch.optim as optim
 from utils import * 
 
 from model import ConditionalModel
 from ema import EMA
-import torch.optim as optim
+from evaluate import *
 
 # hdr_plot_style()
 # swiss_roll, _ = make_swiss_roll(10**4,noise=0.1)
@@ -46,17 +47,13 @@ test_x, test_y = load_data('../../dataset/UCI_HAR_Dataset', 'test')
 
 classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
-train_x = train_x[:, :2]
 labels = train_y
-test_x = test_x[:, :2]
+dataset = train_x
 
-x, y = train_x[:, 0], train_x[:, 1]
-dataset = torch.stack((x, y), dim=-1)
-
-fig, ax = plt.subplots()
-scatter = plt.scatter(x, y, c=labels, alpha=.8, marker='.')
-plt.legend(handles=scatter.legend_elements()[0], labels=classes)
-plt.show()
+# fig, ax = plt.subplots()
+# scatter = plt.scatter(x, y, c=labels, alpha=.8, marker='.')
+# plt.legend(handles=scatter.legend_elements()[0], labels=classes)
+# plt.show()
 
 
 num_steps = 100
@@ -78,13 +75,13 @@ def q_x(x_0, t, noise=None):
     return (alphas_t * x_0 + alphas_1_m_t * noise)
 
 # Visualize the forward process
-fig, axs = plt.subplots(1, 10, figsize=(28, 3))
-for i in range(10):
-    q_i = q_x(dataset, torch.tensor([i * 10]))
-    axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
-    axs[i].set_axis_off()
-    axs[i].set_title('$q(\mathbf{x}_{'+str(i*10)+'})$')
-plt.show()
+# fig, axs = plt.subplots(1, 10, figsize=(28, 3))
+# for i in range(10):
+#     q_i = q_x(dataset, torch.tensor([i * 10]))
+#     axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
+#     axs[i].set_axis_off()
+#     axs[i].set_title('$q(\mathbf{x}_{'+str(i*10)+'})$')
+# plt.show()
 
 # Used to calculate the mean and variance of the data.  Can be used to assess how close the data is to
 # the normal distribution (all noise) 
@@ -103,41 +100,57 @@ def q_posterior_mean_variance(x_0, x_t, t):
 
 ### TRAINING ###
 
-model = ConditionalModel(num_steps)
-optimizer = optim.Adam(model.parameters(), lr=1e-3)
-#dataset = torch.tensor(data.T).float()
-# Create EMA model
-ema = EMA(0.9)
-ema.register(model)
-# Batch size
-batch_size = 128
-for t in range(1000):
-    # X is a torch Variable
-    permutation = torch.randperm(dataset.size()[0])
-    for i in range(0, dataset.size()[0], batch_size):
-        # Retrieve current batch
-        indices = permutation[i:i+batch_size]
-        batch_x = dataset[indices]
-        # Compute the loss
-        loss = noise_estimation_loss(model, batch_x,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,num_steps)
-        # Before the backward pass, zero all of the network gradients
-        optimizer.zero_grad()
-        # Backward pass: compute gradient of the loss with respect to parameters
-        loss.backward()
-        # Perform gradient clipping
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
-        # Calling the step function to update the parameters
-        optimizer.step()
-        # Update the exponential moving average
-        ema.update(model)
-    # Print loss
-    if (t % num_steps == 0):
-        print(loss)
-        x_seq = p_sample_loop(model, dataset.shape,num_steps,alphas,betas,one_minus_alphas_bar_sqrt)
-        fig, axs = plt.subplots(1, 10, figsize=(28, 3))
-        for i in range(1, 11):
-            cur_x = x_seq[i * 10].detach()
-            axs[i-1].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
-            axs[i-1].set_axis_off()
-            axs[i-1].set_title('$q(\mathbf{x}_{'+str((11-i)*num_steps)+'})$')
-plt.show()
+# print("Starting training")
+
+# model = ConditionalModel(num_steps, dataset.size()[1])
+# optimizer = optim.Adam(model.parameters(), lr=1e-3)
+# # Create EMA model
+# ema = EMA(0.9)
+# ema.register(model)
+
+# batch_size = 128
+# for t in range(1000):
+#     # X is a torch Variable
+#     permutation = torch.randperm(dataset.size()[0])
+#     for i in range(0, dataset.size()[0], batch_size):
+#         # Retrieve current batch
+#         indices = permutation[i:i+batch_size]
+#         batch_x = dataset[indices]
+#         # Compute the loss
+#         loss = noise_estimation_loss(model, batch_x,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,num_steps)
+#         # Before the backward pass, zero all of the network gradients
+#         optimizer.zero_grad()
+#         # Backward pass: compute gradient of the loss with respect to parameters
+#         loss.backward()
+#         # Perform gradient clipping
+#         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
+#         # Calling the step function to update the parameters
+#         optimizer.step()
+#         # Update the exponential moving average
+#         ema.update(model)
+#     # Print loss
+#     if (t % num_steps == 0):
+#         print(loss)
+#         # x_seq = p_sample_loop(model, dataset.shape,num_steps,alphas,betas,one_minus_alphas_bar_sqrt)
+#         # fig, axs = plt.subplots(1, 10, figsize=(28, 3))
+#         # for i in range(1, 11):
+#         #     cur_x = x_seq[i * 10].detach()
+#         #     axs[i-1].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
+#         #     axs[i-1].set_axis_off()
+#         #     axs[i-1].set_title('$q(\mathbf{x}_{'+str((11-i)*num_steps)+'})$')
+# plt.show()
+
+# torch.save(model.state_dict(), './models/har_diffusion.pth')
+
+
+### Evaluation ###
+
+labels = test_y
+dataset = test_x
+
+model = ConditionalModel(num_steps, dataset.size()[1])
+model.load_state_dict(torch.load('./models/har_diffusion.pth'))
+
+output = get_model_output(model, dataset, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
+print(output)
+perform_pca(dataset, output)

@@ -125,6 +125,31 @@ def noise_estimation_loss(model, x_0,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,n
     output = model(x, t)
     return (e - output).square().mean()
 
+def get_model_output(model, dataset, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps):
+    """Gets the output of the model
+    
+    Args:
+        model (ConditionalModel): the model to be used
+        dataset (torch.Tensor): the data to be tested
+        alphas_bar_sqrt (?): something with the noise --> needed for calculation
+        one_minus_alphas_bar_sqrt (?): something with the noise --> needed for calculation
+        num_steps (int): the number of noise steps
+
+    """
+    batch_size = dataset.shape[0]
+    # Select a random step for each example
+    t = torch.randint(0, num_steps, size=(batch_size // 2 + 1,))
+    t = torch.cat([t, num_steps - t - 1], dim=0)[:batch_size].long()
+    # dataset multiplier
+    a = extract(alphas_bar_sqrt, t, dataset)
+    # eps multiplier
+    am1 = extract(one_minus_alphas_bar_sqrt, t, dataset)
+    e = torch.randn_like(dataset)
+    # model input
+    x = dataset * a + e * am1
+    output = model(x, t)
+    return output
+
 def load_data(dataset, dataset_type):
     """Load data from text file
 

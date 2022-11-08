@@ -19,12 +19,12 @@ class ConditionalLinear(nn.Module):
         return out
         
 class ConditionalModel(nn.Module):
-    def __init__(self, n_steps):
+    def __init__(self, n_steps, input_size):
         super(ConditionalModel, self).__init__()
-        self.lin1 = ConditionalLinear(2, 128, n_steps)
+        self.lin1 = ConditionalLinear(input_size, 128, n_steps)
         self.lin2 = ConditionalLinear(128, 128, n_steps)
         self.lin3 = ConditionalLinear(128, 128, n_steps)
-        self.lin4 = nn.Linear(128, 2)
+        self.lin4 = nn.Linear(128, input_size)
     
     def forward(self, x, y):
         x = F.softplus(self.lin1(x, y))
