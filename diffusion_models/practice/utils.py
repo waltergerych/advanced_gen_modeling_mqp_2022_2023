@@ -204,6 +204,6 @@ def get_activity_data(x, y, activity_label):
     activity_idx = (y == activity_label).nonzero().flatten()
     # make data_x and data_y tensor with data from the specified activity label
     data_x = x[activity_idx,:]
-    data_y = torch.ones(data_x.size(0))
+    data_y = torch.multiply(torch.ones(data_x.size(0)), activity_label)
 
     return data_x, data_y

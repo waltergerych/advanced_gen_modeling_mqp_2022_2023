@@ -11,18 +11,19 @@ from utils import *
 from model import ConditionalModel
 from ema import EMA
 from evaluate import *
+from classifier import *
 
-# hdr_plot_style()
-# swiss_roll, _ = make_swiss_roll(10**4,noise=0.1)
-# swiss_roll = swiss_roll[:, [0, 2]]/10.0
+hdr_plot_style()
+swiss_roll, _ = make_swiss_roll(10**4,noise=0.1)
+swiss_roll = swiss_roll[:, [0, 2]]/10.0
 
-# s_curve, _= make_s_curve(10**4, noise=0.1)
-# s_curve = s_curve[:, [0, 2]]/10.0
+s_curve, _= make_s_curve(10**4, noise=0.1)
+s_curve = s_curve[:, [0, 2]]/10.0
 
-# moons, _ = make_moons(10**4, noise=0.1)
+moons, _ = make_moons(10**4, noise=0.1)
 
-# data = s_curve.T
-# dataset = torch.Tensor(data.T).float()
+data = s_curve.T
+dataset = torch.Tensor(data.T).float()
 
 
 # fig,axes = plt.subplots(1,3,figsize=(20,5))
@@ -33,7 +34,7 @@ from evaluate import *
 # data = swiss_roll.T
 # axes[1].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=5)
 # axes[1].axis('off')
-# #dataset = torch.Tensor(data.T).float()
+# # dataset = torch.Tensor(data.T).float()
 
 # data = moons.T
 # axes[2].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=3)
@@ -42,21 +43,33 @@ from evaluate import *
 # plt.show()
 
 # load the datasets
-train_x, train_y = load_data('../../dataset/UCI_HAR_Dataset', 'train')
-test_x, test_y = load_data('../../dataset/UCI_HAR_Dataset', 'test')
+# train_x, train_y = load_data('../../dataset/UCI_HAR_Dataset', 'train')
+# test_x, test_y = load_data('../../dataset/UCI_HAR_Dataset', 'test')
 
-classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
+# classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
-labels = train_y
-dataset = train_x
+# labels = train_y
+# dataset = train_x
 
+# # Define the number of features from the dataset to use. Must be 561 or less
+# num_features = 2
+
+# # Select only the first x features
+# # First 80 features are all acceleration
+# dataset = dataset[:, :num_features]
+
+# dataset, labels = get_activity_data(dataset, labels, 0)
+
+# Plot for showing just two dimensions of the data, x and y
 # fig, ax = plt.subplots()
 # scatter = plt.scatter(x, y, c=labels, alpha=.8, marker='.')
 # plt.legend(handles=scatter.legend_elements()[0], labels=classes)
 # plt.show()
 
-
+# Number of time steps
 num_steps = 100
+# Number 
+num_divs = 10
 betas = make_beta_schedule(schedule='sigmoid', n_timesteps=num_steps, start=1e-5, end=0.5e-2)
 
 alphas = 1 - betas
@@ -75,13 +88,16 @@ def q_x(x_0, t, noise=None):
     return (alphas_t * x_0 + alphas_1_m_t * noise)
 
 # Visualize the forward process
-# fig, axs = plt.subplots(1, 10, figsize=(28, 3))
-# for i in range(10):
-#     q_i = q_x(dataset, torch.tensor([i * 10]))
-#     axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
-#     axs[i].set_axis_off()
-#     axs[i].set_title('$q(\mathbf{x}_{'+str(i*10)+'})$')
-# plt.show()
+fig, axs = plt.subplots(1, num_divs + 1, figsize=(28, 3))
+axs[0].scatter(dataset[:, 0], dataset[:, 1],color='white',edgecolor='gray', s=5)
+axs[0].set_axis_off()
+axs[0].set_title('$q(\mathbf{x}_{'+str(0)+'})$')
+for i in range(1, num_divs + 1):
+    q_i = q_x(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]))
+    axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
+    axs[i].set_axis_off()
+    axs[i].set_title('$q(\mathbf{x}_{'+str(i*int(num_steps/num_divs))+'})$')
+plt.show()
 
 # Used to calculate the mean and variance of the data.  Can be used to assess how close the data is to
 # the normal distribution (all noise) 
@@ -100,57 +116,75 @@ def q_posterior_mean_variance(x_0, x_t, t):
 
 ### TRAINING ###
 
-# print("Starting training")
+print("Starting training")
 
-# model = ConditionalModel(num_steps, dataset.size()[1])
-# optimizer = optim.Adam(model.parameters(), lr=1e-3)
-# # Create EMA model
-# ema = EMA(0.9)
-# ema.register(model)
+model = ConditionalModel(num_steps, dataset.size()[1])
+optimizer = optim.Adam(model.parameters(), lr=1e-3)
+# Create EMA model
+ema = EMA(0.9)
+ema.register(model)
 
-# batch_size = 128
-# for t in range(1000):
-#     # X is a torch Variable
-#     permutation = torch.randperm(dataset.size()[0])
-#     for i in range(0, dataset.size()[0], batch_size):
-#         # Retrieve current batch
-#         indices = permutation[i:i+batch_size]
-#         batch_x = dataset[indices]
-#         # Compute the loss
-#         loss = noise_estimation_loss(model, batch_x,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,num_steps)
-#         # Before the backward pass, zero all of the network gradients
-#         optimizer.zero_grad()
-#         # Backward pass: compute gradient of the loss with respect to parameters
-#         loss.backward()
-#         # Perform gradient clipping
-#         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
-#         # Calling the step function to update the parameters
-#         optimizer.step()
-#         # Update the exponential moving average
-#         ema.update(model)
-#     # Print loss
-#     if (t % num_steps == 0):
-#         print(loss)
-#         # x_seq = p_sample_loop(model, dataset.shape,num_steps,alphas,betas,one_minus_alphas_bar_sqrt)
-#         # fig, axs = plt.subplots(1, 10, figsize=(28, 3))
-#         # for i in range(1, 11):
-#         #     cur_x = x_seq[i * 10].detach()
-#         #     axs[i-1].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
-#         #     axs[i-1].set_axis_off()
-#         #     axs[i-1].set_title('$q(\mathbf{x}_{'+str((11-i)*num_steps)+'})$')
-# plt.show()
+batch_size = 128
+for t in range(num_steps):
+    # X is a torch Variable
+    permutation = torch.randperm(dataset.size()[0])
+    for i in range(0, dataset.size()[0], batch_size):
+        # Retrieve current batch
+        indices = permutation[i:i+batch_size]
+        batch_x = dataset[indices]
+        # Compute the loss
+        loss = noise_estimation_loss(model, batch_x,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,num_steps)
+        # Before the backward pass, zero all of the network gradients
+        optimizer.zero_grad()
+        # Backward pass: compute gradient of the loss with respect to parameters
+        loss.backward()
+        # Perform gradient clipping
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
+        # Calling the step function to update the parameters
+        optimizer.step()
+        # Update the exponential moving average
+        ema.update(model)
+    # Print loss
+    if (t % int(num_steps/num_divs) == 0):
+        print(f'{t}:\t{loss}')
+        x_seq = p_sample_loop(model, dataset.shape,num_steps,alphas,betas,one_minus_alphas_bar_sqrt)
+        fig, axs = plt.subplots(1, num_divs+1, figsize=(28, 3))
+        for i in range(num_divs + 1):
+            cur_x = x_seq[i].detach()
+            axs[i].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
+            axs[i].set_axis_off()
+            axs[i].set_title('$q(\mathbf{x}_{'+str(int((num_divs-i)*(num_steps)/num_divs))+'})$')
+plt.show()
 
-# torch.save(model.state_dict(), './models/har_diffusion.pth')
+torch.save(model.state_dict(), './models/har_diffusion_walking.pth')
 
 
 ### Evaluation ###
 
+print("Starting evaluation")
+
 labels = test_y
 dataset = test_x
+dataset = dataset[:, :num_features]
+dataset, labels = get_activity_data(dataset, labels, 0)
 
 model = ConditionalModel(num_steps, dataset.size()[1])
-model.load_state_dict(torch.load('./models/har_diffusion.pth'))
+model.load_state_dict(torch.load('./models/har_diffusion_walking.pth'))
 
 output = get_model_output(model, dataset, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
 print(output)
-perform_pca(dataset, output)
+# perform_pca(dataset, output)
+graph_two_features(dataset, output)
+
+
+# Evaluate on a trained classifier
+# fake, real = output, dataset
+# input_size = 128
+# classifier_path = './classifiers/real_trained_classifier.pth'
+
+# classifier = Classifier(len(real[0][0]), input_size)
+# classifier.load_state_dict(torch.load(classifier_path))
+
+# real_accuracy = get_accuracy(classifier, real, labels, class_stats=True)
+# fake_accuracy = get_accuracy(classifier, fake, labels, class_stats=True)
+
