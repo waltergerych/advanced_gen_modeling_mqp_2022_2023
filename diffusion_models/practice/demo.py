@@ -60,15 +60,9 @@ dataset = torch.Tensor(data.T).float()
 
 # dataset, labels = get_activity_data(dataset, labels, 0)
 
-# Plot for showing just two dimensions of the data, x and y
-# fig, ax = plt.subplots()
-# scatter = plt.scatter(x, y, c=labels, alpha=.8, marker='.')
-# plt.legend(handles=scatter.legend_elements()[0], labels=classes)
-# plt.show()
-
 # Number of time steps
 num_steps = 100
-# Number 
+# Number of graphs to plot to show the addition of noise over time
 num_divs = 10
 betas = make_beta_schedule(schedule='sigmoid', n_timesteps=num_steps, start=1e-5, end=0.5e-2)
 
@@ -150,7 +144,7 @@ for t in range(num_steps):
         x_seq = p_sample_loop(model, dataset.shape,num_steps,alphas,betas,one_minus_alphas_bar_sqrt)
         fig, axs = plt.subplots(1, num_divs+1, figsize=(28, 3))
         for i in range(num_divs + 1):
-            cur_x = x_seq[i].detach()
+            cur_x = x_seq[i * int(num_steps/num_divs)].detach()
             axs[i].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
             axs[i].set_axis_off()
             axs[i].set_title('$q(\mathbf{x}_{'+str(int((num_divs-i)*(num_steps)/num_divs))+'})$')
@@ -163,10 +157,10 @@ torch.save(model.state_dict(), './models/har_diffusion_walking.pth')
 
 print("Starting evaluation")
 
-labels = test_y
-dataset = test_x
-dataset = dataset[:, :num_features]
-dataset, labels = get_activity_data(dataset, labels, 0)
+# labels = test_y
+# dataset = test_x
+# dataset = dataset[:, :num_features]
+# dataset, labels = get_activity_data(dataset, labels, 0)
 
 model = ConditionalModel(num_steps, dataset.size()[1])
 model.load_state_dict(torch.load('./models/har_diffusion_walking.pth'))
