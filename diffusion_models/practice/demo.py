@@ -61,10 +61,10 @@ dataset = torch.Tensor(data.T).float()
 # dataset, labels = get_activity_data(dataset, labels, 0)
 
 # Number of time steps
-num_steps = 100
-# Number of graphs to plot to show the addition of noise over time
-num_divs = 10
-betas = make_beta_schedule(schedule='sigmoid', n_timesteps=num_steps, start=1e-5, end=0.5e-2)
+NUM_STEPS = 100
+# Number of graphs to plot to show the addition of noise over time (not including X_0)
+NUM_DIVS = 10
+betas = make_beta_schedule(schedule='sigmoid', n_timesteps=NUM_STEPS, start=1e-5, end=0.5e-2)
 
 alphas = 1 - betas
 alphas_prod = torch.cumprod(alphas, 0)
@@ -81,17 +81,30 @@ def q_x(x_0, t, noise=None):
     alphas_1_m_t = extract(one_minus_alphas_bar_sqrt, t, x_0)
     return (alphas_t * x_0 + alphas_1_m_t * noise)
 
+
+def visualize_forward(dataset, num_steps, num_divs):
+    fig, axs = plt.subplots(1, num_divs + 1, figsize=(28, 3))
+    axs[0].scatter(dataset[:, 0], dataset[:, 1],color='white',edgecolor='gray', s=5)
+    axs[0].set_axis_off()
+    axs[0].set_title('$q(\mathbf{x}_{'+str(0)+'})$')
+    for i in range(1, num_divs + 1):
+        q_i = q_x(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]))
+        axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
+        axs[i].set_axis_off()
+        axs[i].set_title('$q(\mathbf{x}_{'+str(i*int(num_steps/num_divs))+'})$')
+    plt.show()
+
+def visualize_backward(model, dataset, num_steps, num_divs, alphas, betas, one_minus_alphas_bar_sqrt, reverse=False):
+    x_seq = p_sample_loop(model, dataset.shape,num_steps,alphas,betas,one_minus_alphas_bar_sqrt)
+    fig, axs = plt.subplots(1, num_divs+1, figsize=(28, 3))
+    for i in range(num_divs + 1):
+        cur_x = x_seq[i * int(num_steps/num_divs)].detach()
+        axs[i if not reverse else num_divs-i].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
+        axs[i if not reverse else num_divs-i].set_axis_off()
+        axs[i if not reverse else num_divs-i].set_title('$q(\mathbf{x}_{'+str(int((num_divs-i)*(num_steps)/num_divs))+'})$')
+
 # Visualize the forward process
-fig, axs = plt.subplots(1, num_divs + 1, figsize=(28, 3))
-axs[0].scatter(dataset[:, 0], dataset[:, 1],color='white',edgecolor='gray', s=5)
-axs[0].set_axis_off()
-axs[0].set_title('$q(\mathbf{x}_{'+str(0)+'})$')
-for i in range(1, num_divs + 1):
-    q_i = q_x(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]))
-    axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
-    axs[i].set_axis_off()
-    axs[i].set_title('$q(\mathbf{x}_{'+str(i*int(num_steps/num_divs))+'})$')
-plt.show()
+visualize_forward(dataset, NUM_STEPS, NUM_DIVS)
 
 # Used to calculate the mean and variance of the data.  Can be used to assess how close the data is to
 # the normal distribution (all noise) 
@@ -112,14 +125,14 @@ def q_posterior_mean_variance(x_0, x_t, t):
 
 print("Starting training")
 
-model = ConditionalModel(num_steps, dataset.size()[1])
+model = ConditionalModel(NUM_STEPS, dataset.size()[1])
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 # Create EMA model
 ema = EMA(0.9)
 ema.register(model)
 
 batch_size = 128
-for t in range(num_steps):
+for t in range(NUM_STEPS):
     # X is a torch Variable
     permutation = torch.randperm(dataset.size()[0])
     for i in range(0, dataset.size()[0], batch_size):
@@ -127,7 +140,7 @@ for t in range(num_steps):
         indices = permutation[i:i+batch_size]
         batch_x = dataset[indices]
         # Compute the loss
-        loss = noise_estimation_loss(model, batch_x,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,num_steps)
+        loss = noise_estimation_loss(model, batch_x,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,NUM_STEPS)
         # Before the backward pass, zero all of the network gradients
         optimizer.zero_grad()
         # Backward pass: compute gradient of the loss with respect to parameters
@@ -139,15 +152,10 @@ for t in range(num_steps):
         # Update the exponential moving average
         ema.update(model)
     # Print loss
-    if (t % int(num_steps/num_divs) == 0):
+    if (t % int(NUM_STEPS/NUM_DIVS) == 0):
         print(f'{t}:\t{loss}')
-        x_seq = p_sample_loop(model, dataset.shape,num_steps,alphas,betas,one_minus_alphas_bar_sqrt)
-        fig, axs = plt.subplots(1, num_divs+1, figsize=(28, 3))
-        for i in range(num_divs + 1):
-            cur_x = x_seq[i * int(num_steps/num_divs)].detach()
-            axs[i].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
-            axs[i].set_axis_off()
-            axs[i].set_title('$q(\mathbf{x}_{'+str(int((num_divs-i)*(num_steps)/num_divs))+'})$')
+        visualize_backward(model, dataset, NUM_STEPS, NUM_DIVS, alphas, betas, one_minus_alphas_bar_sqrt, reverse=True)
+
 plt.show()
 
 torch.save(model.state_dict(), './models/har_diffusion_walking.pth')
@@ -162,10 +170,10 @@ print("Starting evaluation")
 # dataset = dataset[:, :num_features]
 # dataset, labels = get_activity_data(dataset, labels, 0)
 
-model = ConditionalModel(num_steps, dataset.size()[1])
+model = ConditionalModel(NUM_STEPS, dataset.size()[1])
 model.load_state_dict(torch.load('./models/har_diffusion_walking.pth'))
 
-output = get_model_output(model, dataset, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
+output = get_model_output(model, dataset, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, NUM_STEPS)
 print(output)
 # perform_pca(dataset, output)
 graph_two_features(dataset, output)
