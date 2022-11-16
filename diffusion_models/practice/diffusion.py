@@ -70,6 +70,7 @@ def visualize_forward(dataset, num_steps, num_divs, diffusion):
     axs[0].set_axis_off()
     axs[0].set_title('$q(\mathbf{x}_{'+str(0)+'})$')
     for i in range(1, num_divs + 1):
+        print(torch.tensor([i * int(num_steps/num_divs) - 1]))
         q_i = q_x(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion)
         axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
         axs[i].set_axis_off()
@@ -169,13 +170,6 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
             print(f'{t}:\t{loss}')
             if plot:
                 visualize_backward(model, dataset, num_steps, num_divs, diffusion)
-                # x_seq = p_sample_loop(model, dataset.shape,num_steps,alphas,betas,one_minus_alphas_bar_sqrt)
-                # fig, axs = plt.subplots(1, num_divs+1, figsize=(28, 3))
-                # for i in range(num_divs + 1):
-                #     cur_x = x_seq[i * int(training_time_steps/num_divs)].detach()
-                #     axs[i].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
-                #     axs[i].set_axis_off()
-                #     axs[i].set_title('$q(\mathbf{x}_{'+str(int((num_divs-i)*(training_time_steps)/num_divs))+'})$')
     if plot:
         plt.show()
 

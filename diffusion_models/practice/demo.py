@@ -62,13 +62,14 @@ dataset = torch.Tensor(data.T).float()
 # dataset, labels = get_activity_data(dataset, labels, 0)
 
 # Number of time steps
-NUM_STEPS = 1000
+NUM_STEPS = 100
+NUM_REVERSE_STEPS = 1000
 # Number of graphs to plot to show the addition of noise over time (not including X_0)
 NUM_DIVS = 10
 
-diffusion = forward_diffusion(dataset, NUM_STEPS, True)
+diffusion = forward_diffusion(dataset, NUM_STEPS, plot=True)
 print("Starting training")
-model = reverse_diffusion(dataset, diffusion, NUM_STEPS, True)
+model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=True)
 
 torch.save(model.state_dict(), './models/har_diffusion.pth')
 
