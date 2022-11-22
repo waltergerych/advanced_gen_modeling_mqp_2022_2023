@@ -44,22 +44,20 @@ dataset = torch.Tensor(data.T).float()
 # plt.show()
 
 # load the datasets
-# train_x, train_y = load_data('../../dataset/UCI_HAR_Dataset', 'train')
-# test_x, test_y = load_data('../../dataset/UCI_HAR_Dataset', 'test')
+train_x, train_y = load_data('../../dataset/UCI_HAR_Dataset', 'train')
+test_x, test_y = load_data('../../dataset/UCI_HAR_Dataset', 'test')
 
-# classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
+classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
-# labels = train_y
-# dataset = train_x
+labels = train_y
+dataset = train_x
 
-# # Define the number of features from the dataset to use. Must be 561 or less
-# num_features = 2
+# Define the number of features from the dataset to use. Must be 561 or less
+num_features = 561
 
-# # Select only the first x features
-# # First 80 features are all acceleration
-# dataset = dataset[:, :num_features]
-
-# dataset, labels = get_activity_data(dataset, labels, 0)
+# Select only the first x features
+# First 80 features are all acceleration
+dataset = dataset[:, :num_features]
 
 # Number of time steps
 NUM_STEPS = 100
@@ -67,42 +65,67 @@ NUM_REVERSE_STEPS = 1000
 # Number of graphs to plot to show the addition of noise over time (not including X_0)
 NUM_DIVS = 10
 
-diffusion = forward_diffusion(dataset, NUM_STEPS, plot=True)
-print("Starting training")
-model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=True)
+models = []
+diffusions = []
 
-torch.save(model.state_dict(), './models/s_shape.pth')
+original_data, original_labels = dataset, labels
+
+# for i in range(len(classes)):
+#     dataset, labels = get_activity_data(original_data, original_labels, i)
+
+#     diffusion = forward_diffusion(dataset, NUM_STEPS, plot=False)
+#     print("Starting training for class " + str(classes[i]))
+#     model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False)
+#     models.append(model)
+#     diffusions.append(diffusion)
+
+#     torch.save(model.state_dict(), f'./models/model_561_{i}.pth')
 
 # model = ConditionalModel(NUM_STEPS, dataset.size()[1])
-# model.load_state_xdict(torch.load('./models/har_diffusion.pth'))
+# model.load_state_dict(torch.load('./models/har_diffusion.pth'))
 
 
 ### Evaluation ###
 
 print("Starting evaluation")
 
-# labels = test_y
-# dataset = test_x
-# dataset = dataset[:, :num_features]
-# dataset, labels = get_activity_data(dataset, labels, 0)
+labels = test_y
+dataset = test_x
+dataset = dataset[:, :num_features]
 
 # model = ConditionalModel(NUM_STEPS, dataset.size()[1])
 # model.load_state_dict(torch.load('./models/har_diffusion_walking.pth'))
 
-output = get_model_output(model, dataset, diffusion.alphas_bar_sqrt, diffusion.one_minus_alphas_bar_sqrt, NUM_STEPS)
-print(output)
+# output = get_model_output(model, dataset, diffusion.alphas_bar_sqrt, diffusion.one_minus_alphas_bar_sqrt, NUM_STEPS)
+# print(output)
 # perform_pca(dataset, output)
-graph_two_features(dataset, output)
+# graph_two_features(dataset, output)
 
 
 # Evaluate on a trained classifier
-# fake, real = output, dataset
-# input_size = 128
-# classifier_path = './classifiers/real_trained_classifier.pth'
+generated_data_x = []
+generated_data_y = []
+for i in range(len(classes)):
+    model = ConditionalModel(NUM_STEPS, dataset.size()[1])
+    model.load_state_dict(torch.load(f'./models/model_561_{i}.pth'))
+    diffusion = forward_diffusion(dataset, NUM_STEPS, plot=False)
+    output = get_model_output(model, dataset, diffusion.alphas_bar_sqrt, diffusion.one_minus_alphas_bar_sqrt, NUM_STEPS)
+    generated_data_x.append(output)
+    generated_data_y.append(torch.mul(torch.ones(output.size()[0]), i))
+    print("Generated data for " + str(classes[i]))
 
-# classifier = Classifier(len(real[0][0]), input_size)
-# classifier.load_state_dict(torch.load(classifier_path))
+gen_x = generated_data_x[0]
+for tensor in generated_data_x[1:]:
+    gen_x = torch.cat((gen_x, tensor), 0)
 
-# real_accuracy = get_accuracy(classifier, real, labels, class_stats=True)
-# fake_accuracy = get_accuracy(classifier, fake, labels, class_stats=True)
+generated_x, generated_y = gen_x, torch.cat(generated_data_y)
+
+input_size = 128
+classifier_path = './classifiers/real_trained_classifier.pth'
+
+classifier = Classifier(num_features, input_size)
+classifier.load_state_dict(torch.load(classifier_path))
+
+real_accuracy = get_accuracy(classifier, dataset, labels, class_stats=True)
+fake_accuracy = get_accuracy(classifier, generated_x, generated_y, class_stats=True)
 

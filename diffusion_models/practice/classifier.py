@@ -72,8 +72,8 @@ def get_accuracy(model, data, labels, class_stats=False):
         if class_stats:
             # for each truth-guess pair, increment the correct/total predictions
             for truth, guess, conf in zip(labels, predicted, confidence):
-                correct_predictions[truth.item()] += 1 if truth == guess else 0
-                total_predictions[truth] += 1
+                correct_predictions[int(truth.item())] += 1 if truth == guess else 0
+                total_predictions[int(truth.item())] += 1
                 total_confidence[guess] += conf.item()
                 total_guesses[guess] += 1
 
@@ -84,20 +84,14 @@ def get_accuracy(model, data, labels, class_stats=False):
                 print(f"Class {classes[i]}:\t{class_acc[i]*100}%")
 
             # print out the accuracy
-            print(f"Accuracy of the model on testing set: {percent_correct*100}%\n")
-
-            # calculate the average confidence of the guess in each class
-            class_conf = (total_confidence / total_guesses)
-            # print out the average confidence of each class
-            for i in range(len(classes)):
-                print(f"Confidence in class {classes[i]} guess:\t{class_conf[i]*100}%")
+            print(f"Total Accuracy:\t{percent_correct*100}%\n")
 
             # show confusion matrix
             confusion_matrix_df = pd.DataFrame(confusion_matrix(labels, predicted))
             print("\nConfusion Matrix")
             print(confusion_matrix_df)
-            sns.heatmap(confusion_matrix_df, annot=True)
-            plt.show()
+            # sns.heatmap(confusion_matrix_df, annot=True)
+            # plt.show()
 
             # print classification report
             print(classification_report(labels, predicted))

@@ -71,7 +71,6 @@ def visualize_forward(dataset, num_steps, num_divs, diffusion):
     axs[0].set_axis_off()
     axs[0].set_title('$q(\mathbf{x}_{'+str(0)+'})$')
     for i in range(1, num_divs + 1):
-        print(torch.tensor([i * int(num_steps/num_divs) - 1]))
         q_i = q_x(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion)
         axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
         axs[i].set_axis_off()
