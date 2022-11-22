@@ -71,7 +71,10 @@ diffusion = forward_diffusion(dataset, NUM_STEPS, plot=True)
 print("Starting training")
 model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=True)
 
-torch.save(model.state_dict(), './models/har_diffusion.pth')
+torch.save(model.state_dict(), './models/s_shape.pth')
+
+# model = ConditionalModel(NUM_STEPS, dataset.size()[1])
+# model.load_state_xdict(torch.load('./models/har_diffusion.pth'))
 
 
 ### Evaluation ###

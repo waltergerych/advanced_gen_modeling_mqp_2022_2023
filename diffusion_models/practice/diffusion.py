@@ -12,6 +12,7 @@ from model import ConditionalModel
 from ema import EMA
 from evaluate import *
 from classifier import *
+import seaborn as sns
 
 class Diffusion():
     def __init__(self, num_steps):
@@ -26,7 +27,7 @@ class Diffusion():
         super().__init__()
         self.num_steps = num_steps
         # Beta scheduler
-        self.betas = make_beta_schedule(schedule='sigmoid', n_timesteps=num_steps, start=1e-5, end=0.5e-2)
+        self.betas = make_beta_schedule(schedule='linear', n_timesteps=num_steps, start=1e-5, end=0.5e-2)
         # Alphas
         self.alphas = 1 - self.betas
         # Cumulative product of alphas
@@ -77,7 +78,7 @@ def visualize_forward(dataset, num_steps, num_divs, diffusion):
         axs[i].set_title('$q(\mathbf{x}_{'+str(i*int(num_steps/num_divs))+'})$')
     plt.show()
 
-def visualize_backward(model, dataset, num_steps, num_divs, diffusion, reverse=False):
+def visualize_backward(model, dataset, num_steps, num_divs, diffusion, heatmap=False, reverse=False):
     """Vizualizes the backwards diffusion process
     
     Args:
@@ -89,12 +90,16 @@ def visualize_backward(model, dataset, num_steps, num_divs, diffusion, reverse=F
         reverse (bool): If true, will plot the graphs in reverse
     """
     x_seq = p_sample_loop(model, dataset.shape,num_steps,diffusion.alphas,diffusion.betas,diffusion.one_minus_alphas_bar_sqrt)
-    fig, axs = plt.subplots(1, num_divs+1, figsize=(28, 3))
+    fig, axs = plt.subplots(2, num_divs+1, figsize=(28, 6))
     for i in range(num_divs + 1):
         cur_x = x_seq[i * int(num_steps/num_divs)].detach()
-        axs[i if not reverse else num_divs-i].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
-        axs[i if not reverse else num_divs-i].set_axis_off()
-        axs[i if not reverse else num_divs-i].set_title('$q(\mathbf{x}_{'+str(int((num_divs-i)*(num_steps)/num_divs))+'})$')
+        axs[0, i if not reverse else num_divs-i].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
+        axs[0, i if not reverse else num_divs-i].set_axis_off()
+        axs[0, i if not reverse else num_divs-i].set_title('$q(\mathbf{x}_{'+str(int((num_divs-i)*(num_steps)/num_divs))+'})$')
+
+        if heatmap:
+            cur_df = pd.DataFrame(cur_x)
+            sns.kdeplot(data=cur_df, x=0, y=1, fill=True, thresh=0, levels=100, ax=axs[1, i if not reverse else num_divs-i], cmap="mako")
 
 
 def forward_diffusion(dataset, num_steps, plot=False, num_divs=10):
@@ -166,10 +171,13 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
             # Update the exponential moving average
             ema.update(model)
         # Print loss
-        if (t % int(training_time_steps/num_divs) == 0):
-            print(f'{t}:\t{loss}')
-            if plot:
-                visualize_backward(model, dataset, num_steps, num_divs, diffusion)
+        if (t % int(training_time_steps/(num_divs*2)) == 0):
+            # Print every 5% update
+            print(f'{int((t/training_time_steps)*100) if t != 0 else 0}% done \t loss: {loss}')
+            # Draw plots every num_divs steps (default 10)
+            if plot and t % (training_time_steps/num_divs) == 0:
+                visualize_backward(model, dataset, num_steps, num_divs, diffusion, heatmap=True)
+                # visualize_heatmap(model, dataset, num_steps, num_divs, diffusion)
     if plot:
         plt.show()
 
