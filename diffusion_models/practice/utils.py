@@ -6,6 +6,7 @@ import os
 # External libraries
 import numpy as np
 import torch
+import pandas as pd
 
 def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2):
     if schedule == 'linear':
@@ -138,16 +139,18 @@ def get_model_output(model, dataset, alphas_bar_sqrt, one_minus_alphas_bar_sqrt,
     """
     batch_size = dataset.shape[0]
     # Select a random step for each example
-    t = torch.randint(0, num_steps, size=(batch_size // 2 + 1,))
-    t = torch.cat([t, num_steps - t - 1], dim=0)[:batch_size].long()
-    # dataset multiplier
-    a = extract(alphas_bar_sqrt, t, dataset)
-    # eps multiplier
-    am1 = extract(one_minus_alphas_bar_sqrt, t, dataset)
-    e = torch.randn_like(dataset)
-    # model input
-    x = dataset * a + e * am1
-    output = model(x, t)
+    # t = torch.randint(0, num_steps, size=(batch_size // 2 + 1,))
+    # t = torch.cat([t, num_steps - t - 1], dim=0)[:batch_size].long()
+    # t = torch.tensor([num_steps-1])
+    # # dataset multiplier
+    # a = extract(alphas_bar_sqrt, t, dataset)
+    # # eps multiplier
+    # am1 = extract(one_minus_alphas_bar_sqrt, t, dataset)
+    # e = torch.randn_like(dataset)
+    # # model input
+    # x = dataset * a + e * am1
+    # output = model(x, t)
+    output = model(dataset, torch.tensor([num_steps-1]))
     return output
 
 def load_data(dataset, dataset_type):
@@ -207,3 +210,22 @@ def get_activity_data(x, y, activity_label):
     data_y = torch.multiply(torch.ones(data_x.size(0)), activity_label)
 
     return data_x, data_y
+
+def read_user_data(uid):
+    """Reads a user data from the ExtraSensory dataset given a user ID
+
+    Assumes the current folder/file structure does not change
+    Example UID: '1155FF54-63D3-4AB2-9863-8385D0BD0A13'
+
+    Args:
+        uid (String): the user ID of the user to get the data for
+
+    Returns:
+        df (pandas.DataFrame): the dataframe of the user's data
+        feature_names (pandas.DataFrame): the data for all of the features
+        labels (pandas.DataFrame): the data for all of the labels
+    """
+    df = pd.read_csv(f'./../../dataset/ExtraSensory/{uid}.features_labels.csv/{uid}.features_labels.csv')
+    feature_names = df.iloc[:, 0:226]
+    labels = df.iloc[:, 226:]
+    return df, feature_names, labels

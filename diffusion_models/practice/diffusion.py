@@ -57,6 +57,25 @@ def q_x(x_0, t, model, noise=None):
     alphas_1_m_t = extract(model.one_minus_alphas_bar_sqrt, t, x_0)
     return (alphas_t * x_0 + alphas_1_m_t * noise)
 
+def q_x_cat(x_0, t, model, K):
+    """Function to add t time steps of noise to categorical data x
+    
+    Args:
+        x_0 (torch.Tensor): Categorical data to add noise to
+        t (torch.Tensor): the number of time steps to add
+        model (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
+                                Constants calculated from num_steps input to class constructor
+        K (torch.Tensor): Tensor of size 1 representing the number of classes the categorical variable x can take
+
+    Returns:
+        (torch.Tensor): the data with the noise added to it
+    """
+    alphas_t = extract(model.alphas_bar_sqrt, t, x_0)
+    alphas_1_m_t = extract(model.one_minus_alphas_bar_sqrt, t, x_0)
+    cat = (alphas_t * x_0 + alphas_1_m_t) / K
+    print(cat)
+    return cat
+
 def visualize_forward(dataset, num_steps, num_divs, diffusion):
     """Vizualizes the forward diffusion process
     
@@ -71,7 +90,8 @@ def visualize_forward(dataset, num_steps, num_divs, diffusion):
     axs[0].set_axis_off()
     axs[0].set_title('$q(\mathbf{x}_{'+str(0)+'})$')
     for i in range(1, num_divs + 1):
-        q_i = q_x(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion)
+        # q_i = q_x(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion)
+        q_i = q_x_cat(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion, torch.tensor([2]))
         axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
         axs[i].set_axis_off()
         axs[i].set_title('$q(\mathbf{x}_{'+str(i*int(num_steps/num_divs))+'})$')
@@ -118,7 +138,7 @@ def forward_diffusion(dataset, num_steps, plot=False, num_divs=10):
 
     return diffusion
 
-def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num_divs=10):
+def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False):
     """Applies reverse diffusion to a dataset
 
     Args:
@@ -175,9 +195,25 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
             print(f'{int((t/training_time_steps)*100) if t != 0 else 0}% done \t loss: {loss}')
             # Draw plots every num_divs steps (default 10)
             if plot and t % (training_time_steps/num_divs) == 0:
-                visualize_backward(model, dataset, num_steps, num_divs, diffusion, heatmap=True)
+                visualize_backward(model, dataset, num_steps, num_divs, diffusion, heatmap=show_heatmap)
                 # visualize_heatmap(model, dataset, num_steps, num_divs, diffusion)
     if plot:
         plt.show()
 
     return model
+
+def use_model(model, dataset, t, n):
+    """Takes in a trained diffusion model and creates n datapoints from Gaussian noise
+
+    Args:
+        model (ConditionalModel): a trained diffusion model
+        t (int): the number of time steps to remove from the noise
+        n (int): number of datapoints to create
+
+    Returns:
+        data (torch.Tensor): the generated data
+    """
+    noise = torch.randn_like(dataset)
+    noise = noise[:n]
+    data = model(noise, torch.tensor([t]))
+    return data
