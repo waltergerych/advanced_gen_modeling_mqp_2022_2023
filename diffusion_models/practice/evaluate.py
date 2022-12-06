@@ -74,7 +74,7 @@ def perform_pca_har_classes(data, labels, classes):
     plt.title("PCA")
     plt.show()
 
-def pca_class_real_and_fake(real_data, real_labels, fake_data, fake_labels, classes):
+def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
     """ Perform a principal component analysis (PCA) on real and fake data and shows class subcategories
 
     Args:
@@ -85,29 +85,40 @@ def pca_class_real_and_fake(real_data, real_labels, fake_data, fake_labels, clas
     Returns:
         None
     """
+    # Combine data
+    data = torch.cat([real_data, fake_data], dim=0)
+
+    # Fit PCA on combined data
+    pca = PCA(n_components=2)
+    components = pca.fit_transform(data.detach().numpy())
+
+    # Separate into real and fake classes again
+    real_components = components[:real_data.shape[0]]
+    fake_components = components[real_data.shape[0]:]
+
+    # PCA projection to 2D
+    real = pd.DataFrame(data=real_components, columns=['PC1', 'PC2'])
+    fake = pd.DataFrame(data=fake_components, columns=['PC1', 'PC2'])
+
+    # Visualize 2D
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.set_facecolor('white')
 
-    # Project real to 2D
-    pca = PCA(n_components=2)
-    components = pca.fit_transform(real_data.detach().numpy())
-    df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
-
-    # Visualize real 2D
-    scatter = plt.scatter(df['PC1'], df['PC2'], c=real_labels, alpha=.5, marker='|')
-
-    # Project fake to 2D
-    pca = PCA(n_components=2)
-    components = pca.fit_transform(fake_data.detach().numpy())
-    df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
-
-    # Visualize fake 2D
-    scatter = plt.scatter(df['PC1'], df['PC2'], c=fake_labels, alpha=.3, marker='_')
-
+    scatter = plt.scatter(real['PC1'], real['PC2'], c=real_labels, alpha=.8, marker='.')
     plt.legend(handles=scatter.legend_elements()[0], labels=classes)
     plt.xlabel("PC1")
     plt.ylabel("PC2")
-    plt.title("PCA with Real and Fake Data")
+    plt.title("PCA with Real Data")
+    plt.show()
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.set_facecolor('white')
+
+    scatter = plt.scatter(fake['PC1'], fake['PC2'], c=fake_labels, alpha=.8, marker='.')
+    plt.legend(handles=scatter.legend_elements()[0], labels=classes)
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.title("PCA with Fake Data")
     plt.show()
 
 def graph_two_features(real, fake, noise=None):

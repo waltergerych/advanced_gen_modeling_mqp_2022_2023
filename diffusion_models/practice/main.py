@@ -99,7 +99,10 @@ labels = test_y
 dataset = test_x
 dataset = dataset[:, :num_features]
 input_size = dataset.shape[1]
-num_to_gen = 500
+num_to_gen = 150
+
+# Get real data set to be the same size as generated data set
+dataset[:num_to_gen*len(classes)]
 
 # Get data for each class
 generated_data_x = []
@@ -131,9 +134,7 @@ for i in range(len(classes)):
 gen_x, gen_y = torch.cat(generated_data_x), torch.cat(generated_data_y)
 
 # Do PCA analysis for fake/real and subclasses
-perform_pca_har_classes(dataset, labels, classes)
-perform_pca_har_classes(gen_x, gen_y, classes)
-pca_class_real_and_fake(dataset, labels, gen_x, gen_y, classes)
+pca_with_classes(dataset, labels, gen_x, gen_y, classes)
 
 # Show PCA for each class
 for i in range(len(classes)):
