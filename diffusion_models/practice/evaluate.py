@@ -14,7 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 
 
-def perform_pca(real, fake):
+def perform_pca(real, fake, title=None):
     """ Perform a principal component analysis (PCA) on the data and visualize on a 2D plane
 
     Args:
@@ -24,8 +24,10 @@ def perform_pca(real, fake):
     Returns:
         None
     """
-    labels = np.concatenate((np.ones(len(real)), np.zeros(len(fake))))
+    if title == None:
+        title = 'PCA With Real and Fake Data'
 
+    labels = np.concatenate((np.ones(len(real)), np.zeros(len(fake))))
     data = torch.cat((real, fake), 0)
 
     pca = PCA(n_components=2)
@@ -41,11 +43,9 @@ def perform_pca(real, fake):
     plt.legend(handles=scatter.legend_elements()[0], labels=['Fake', 'Real'])
     plt.xlabel("PC1")
     plt.ylabel("PC2")
-    plt.title("PCA with Real and Fake Data")
-    plt.show()
-
-    print("Explained variance ratio: " + str(pca.explained_variance_ratio_))
-    print("Singular values: " + str(pca.singular_values_))
+    plt.title(title)
+    # plt.savefig(f'./results/{title}.png')
+    # plt.show()
 
 def perform_pca_har_classes(data, labels, classes):
     """ Perform a principal component analysis (PCA) on the data and visualize on a 2D plane
@@ -58,7 +58,6 @@ def perform_pca_har_classes(data, labels, classes):
     Returns:
         None
     """
-
     pca = PCA(n_components=2)
     components = pca.fit_transform(data.detach().numpy())
 
@@ -72,11 +71,44 @@ def perform_pca_har_classes(data, labels, classes):
     plt.legend(handles=scatter.legend_elements()[0], labels=classes)
     plt.xlabel("PC1")
     plt.ylabel("PC2")
-    plt.title("PCA with Real and Fake Data")
+    plt.title("PCA")
     plt.show()
 
-    print("Explained variance ratio: " + str(pca.explained_variance_ratio_))
-    print("Singular values: " + str(pca.singular_values_))
+def pca_class_real_and_fake(real_data, real_labels, fake_data, fake_labels, classes):
+    """ Perform a principal component analysis (PCA) on real and fake data and shows class subcategories
+
+    Args:
+        data (torch.Tensor): the data with all classes for pca
+        labels (torch.Tensor): the class labels for the data
+        classes (list<strings>): the names of the classes labels
+
+    Returns:
+        None
+    """
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.set_facecolor('white')
+
+    # Project real to 2D
+    pca = PCA(n_components=2)
+    components = pca.fit_transform(real_data.detach().numpy())
+    df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
+
+    # Visualize real 2D
+    scatter = plt.scatter(df['PC1'], df['PC2'], c=real_labels, alpha=.5, marker='|')
+
+    # Project fake to 2D
+    pca = PCA(n_components=2)
+    components = pca.fit_transform(fake_data.detach().numpy())
+    df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
+
+    # Visualize fake 2D
+    scatter = plt.scatter(df['PC1'], df['PC2'], c=fake_labels, alpha=.3, marker='_')
+
+    plt.legend(handles=scatter.legend_elements()[0], labels=classes)
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.title("PCA with Real and Fake Data")
+    plt.show()
 
 def graph_two_features(real, fake, noise=None):
     """ Graphs real and fake data with only two features

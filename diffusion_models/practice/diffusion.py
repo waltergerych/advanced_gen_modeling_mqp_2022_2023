@@ -37,6 +37,18 @@ class Diffusion():
         # One minus the cumulative product of alphas
         self.one_minus_alphas_bar_sqrt = torch.sqrt(1 - self.alphas_prod)
 
+def get_denoising_variables(num_steps):
+    """Calculates the variables used in the denoising process and captures them in the class 'Diffusion"
+
+    Args:
+        num_steps (int): the number of steps in the forward diffusion
+
+    Returns:
+        diffusion (Diffusion): a class encapsulating the denoising variables 
+    """
+    diffusion = Diffusion(num_steps)
+
+    return diffusion
 
 # Add t time steps of noise to the data x
 def q_x(x_0, t, model, noise=None):
@@ -202,18 +214,18 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
 
     return model
 
-def use_model(model, dataset, t, n):
+def use_model(model, dataset, diffusion, t):
     """Takes in a trained diffusion model and creates n datapoints from Gaussian noise
 
     Args:
         model (ConditionalModel): a trained diffusion model
+        dataset (torch.Tensor): the dataset shape to model from
+        diffusion (Diffusion): the diffusion variables for the denoising process
         t (int): the number of time steps to remove from the noise
-        n (int): number of datapoints to create
 
     Returns:
         data (torch.Tensor): the generated data
     """
-    noise = torch.randn_like(dataset)
-    noise = noise[:n]
-    data = model(noise, torch.tensor([t]))
-    return data
+    output = p_sample(model, dataset, t, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
+    return output
+    
