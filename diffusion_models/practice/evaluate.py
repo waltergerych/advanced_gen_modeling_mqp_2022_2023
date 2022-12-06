@@ -47,33 +47,6 @@ def perform_pca(real, fake, title=None):
     # plt.savefig(f'./results/{title}.png')
     # plt.show()
 
-def perform_pca_har_classes(data, labels, classes):
-    """ Perform a principal component analysis (PCA) on the data and visualize on a 2D plane
-
-    Args:
-        data (torch.Tensor): the data with all classes for pca
-        labels (torch.Tensor): the class labels for the data
-        classes (list<strings>): the names of the classes labels
-
-    Returns:
-        None
-    """
-    pca = PCA(n_components=2)
-    components = pca.fit_transform(data.detach().numpy())
-
-    # PCA projection to 2D
-    df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
-
-    # visualize the 2D
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.set_facecolor('white')
-    scatter = plt.scatter(df['PC1'], df['PC2'], c=labels, alpha=.8, marker='.')
-    plt.legend(handles=scatter.legend_elements()[0], labels=classes)
-    plt.xlabel("PC1")
-    plt.ylabel("PC2")
-    plt.title("PCA")
-    plt.show()
-
 def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
     """ Perform a principal component analysis (PCA) on real and fake data and shows class subcategories
 
