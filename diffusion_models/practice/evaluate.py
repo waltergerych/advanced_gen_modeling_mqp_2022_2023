@@ -12,6 +12,9 @@ from utils import *
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
+from sklearn.model_selection import train_test_split
 
 
 def perform_pca(real, fake, title=None):
@@ -148,6 +151,29 @@ def make_histograms(data, num_features):
         plt.show()
         # plt.savefig(f'./histograms/fake/{col}.png')
 
+def score(labels, pred):
+    """Calculates accuracy, recall, precision, and f1 based on true labels and predicted labels
+
+    Args:
+        labels (list): the list of true labels
+        pred (list): the list of predicted labels
+
+    Returns:
+        accuracy (float)
+        precision (float)
+        recall (float)
+        f1-score (float)
+    """
+    cm = confusion_matrix(labels, pred)
+    tn, fp, fn, tp = cm.ravel()
+    tn, fp, fn, tp
+    accuracy = accuracy_score(labels, pred)
+    precision = tp/(tp+fp)
+    recall = tp/(tp+fn)
+    f1 = (2 * precision * recall) / (recall + precision)
+
+    return accuracy, precision, recall, f1
+
 def build_binary_classifier(data, labels, classes, class_index):
     """Builds a random forest classifier to decide whether or not data belongs to the specified class
 
@@ -192,7 +218,149 @@ def test_binary_classifier(classifier, data, labels, classes, class_index):
     data = data.detach().numpy()
     pred = classifier.predict(data)
 
+    accuracy, precision, recall, f1 = score(test_labels, pred)
+
     print(confusion_matrix(test_labels, pred))
-    print("Accuracy\t" + str(classifier.score(data, test_labels)))
+    print(f'Accuracy:\t{accuracy}')
+    print(f'F1:\t\t{f1}')
 
+def build_multiclass_classifier(data, labels):
+    """Builds a mulitclass classifier to predict whether data is one of:
+            WALKING
+            DOWNSTAIRS
+            UPSTAIRS
+            SITTING
+            STANDING
+            LAYING
+    Args:
+        data (torch.Tensor): the data for the classifier to be trained on
+        labels (torch.Tensor): the labels for the data
+    """
+    model = RandomForestClassifier(max_depth=10)
 
+    model.fit(data.detach().numpy(), labels)
+
+    return model
+
+def test_multiclass_classifier(model, data, labels):
+    """Tests a multiclass classifier to predict the class data
+
+    Args:
+        model (*some sklearn classifier*): a trained sklearn classifier
+        data (torch.Tensor): the test data to predict the class label for
+        labels (torch.Tensor): the true labels for the data
+
+    Returns:
+        accuracy (float)
+        precision (float)
+        recall (float)
+        f1-score (float)
+    """
+    data = data.detach().numpy()
+    pred = model.predict(data)
+    accuracy = accuracy_score(labels, pred)
+    f1 = f1_score(labels, pred, average='weighted')
+    
+    print(f'Accuracy:\t{accuracy}')
+    print(f'F1:\t\t{f1}')
+
+def separability(real, fake, train_test_ratio):
+    """Determines how separable real and fake data are from each other with a binary classifier
+
+    Will print the output to the terminal
+
+    Args:
+        real (torch.Tensor): the real data
+        fake (torch.Tensor): the fake data
+
+    Returns:
+        None
+    """
+    labels = torch.cat([torch.zeros(real.shape[0]), torch.ones(fake.shape[0])])
+    data = torch.cat([real, fake])
+    train_x, test_x, train_y, test_y = train_test_split(data.detach().numpy(), labels.detach().numpy(), test_size=train_test_ratio)
+
+    model = RandomForestClassifier(max_depth=10)
+    model.fit(train_x, train_y)
+
+    pred = model.predict(test_x)
+    accuracy, precision, recall, f1 = score(test_y, pred)
+    print(f'Accuracy:\t{accuracy}')
+    print(f'Precision:\t{precision}')
+    print(f'Recall:\t{recall}')
+    print(f'F1:\t\t{f1}')
+
+    return model
+
+def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_train_ratio):
+    """Evaluates data on binary classifiers
+
+    Args:
+        dataset (torch.Tensor): the real data
+        labels (torch.Tensor): the labels for the real data
+        fake (torch.Tensor): the fake data
+        fake_labels (torch.Tensor): the labels for the fake data
+        classes (list<strings>): a list of the possible classes
+        test_train_ratio (float): a decimal value between 0 and 1 for the ratio of which to split test and train data
+    """
+    # Split into testing and training for classifier
+    real_train_x, real_test_x, real_train_y, real_test_y = train_test_split(dataset, labels, test_size=test_train_ratio)
+    fake_train_x, fake_test_x, fake_train_y, fake_test_y = train_test_split(fake, fake_labels, test_size=test_train_ratio)
+
+    for i in range(len(classes)):
+        print(f'\nEvaluating class {classes[i]}')
+
+        # Train classifier on real data
+        print('Testing classifier trained on real data')
+        classifier = build_binary_classifier(real_train_x, real_train_y, classes, i)
+        
+        print('Evaluating on real data')
+        test_binary_classifier(classifier, real_test_x, real_test_y, classes, i)
+
+        print('Evaluating on fake data')
+        test_binary_classifier(classifier, fake_test_x, fake_test_y, classes, i)
+
+        # Train classifier on diffusion model generated data
+        print('Testing classifier trained on fake data')
+        classifier = build_binary_classifier(fake_train_x, fake_train_y, classes, i)
+
+        print('Evaluating on real data')
+        test_binary_classifier(classifier, real_test_x, real_test_y, classes, i)
+
+        print('Evaluating on fake data')
+        test_binary_classifier(classifier, fake_test_x, fake_test_y, classes, i)
+
+def multiclass_machine_evaluation(dataset, labels, fake, fake_labels, test_train_ratio):
+    """Evaluates data multiclass classifiers and prints results
+
+    Args:
+        dataset (torch.Tensor): the real data
+        labels (torch.Tensor): the labels for the real data
+        fake (torch.Tensor): the fake data
+        fake_labels (torch.Tensor): the labels for the fake data
+        test_train_ratio (float): a decimal value between 0 and 1 for the ratio of which to split test and train data
+    """
+    # Split into testing and training for classifier
+    real_train_x, real_test_x, real_train_y, real_test_y = train_test_split(dataset, labels, test_size=test_train_ratio)
+    fake_train_x, fake_test_x, fake_train_y, fake_test_y = train_test_split(fake, fake_labels, test_size=test_train_ratio)
+
+    # Train classifier on real data
+    print('Testing classifier trained on real data')
+    classifier = build_multiclass_classifier(real_train_x, real_train_y)
+    
+    print('Evaluating on real data')
+    test_multiclass_classifier(classifier, real_test_x, real_test_y)
+
+    print('Evaluating on fake data')
+    test_multiclass_classifier(classifier, fake_test_x, fake_test_y)
+
+    # Train classifier on diffusion model generated data
+    print('Testing classifier trained on fake data')
+    classifier = build_multiclass_classifier(fake_train_x, fake_train_y)
+
+    print('Evaluating on real data')
+    test_multiclass_classifier(classifier, real_test_x, real_test_y)
+
+    print('Evaluating on fake data')
+    test_multiclass_classifier(classifier, fake_test_x, fake_test_y)
+    
