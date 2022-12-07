@@ -152,14 +152,14 @@ diffusion_data, diffusion_labels = torch.cat(diffusion_data), torch.cat(diffusio
 gan_data, gan_labels = torch.cat(gan_data), torch.cat(gan_labels)
 
 # Do PCA analysis for fake/real and subclasses
-# pca_with_classes(dataset, labels, diffusion_data, diffusion_labels, classes)
+pca_with_classes(dataset, labels, diffusion_data, diffusion_labels, classes)
 
-# # Show PCA for each class
-# for i in range(len(classes)):
-#     true_batch, true_labels = get_activity_data(dataset, labels, i)
-#     fake_batch, fake_labels = get_activity_data(diffusion_data, diffusion_labels, i)
-#     perform_pca(true_batch, fake_batch, f'PCA for class {classes[i]}')
-# plt.show()
+# Show PCA for each class
+for i in range(len(classes)):
+    true_batch, true_labels = get_activity_data(dataset, labels, i)
+    fake_batch, fake_labels = get_activity_data(diffusion_data, diffusion_labels, i)
+    perform_pca(true_batch, fake_batch, f'{classes[i]}')
+plt.show()
 
 # Machine evaluation for diffusion and GAN data
 print('Testing data from diffusion model')

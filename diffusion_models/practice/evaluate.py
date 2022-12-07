@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
 import joblib
+import seaborn as sns
 
 from sklearn.decomposition import PCA
 from utils import *
@@ -40,14 +41,20 @@ def perform_pca(real, fake, title=None):
     df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
 
     # visualize the 2D
-    fig, ax = plt.subplots()
-    ax.set_facecolor('white')
-    scatter = plt.scatter(df['PC1'], df['PC2'], c=labels, alpha=.8, marker='.')
-    plt.legend(handles=scatter.legend_elements()[0], labels=['Fake', 'Real'])
-    plt.xlabel("PC1")
-    plt.ylabel("PC2")
-    plt.title(title)
+    fig, ax = plt.subplots(1, 2, figsize=(12, 6)) # ax[0]: scatterplot, ax[1]: heatmap
+    ax[0].set_facecolor('white')
+    scatter = ax[0].scatter(df['PC1'], df['PC2'], c=labels, alpha=.8, marker='.')
+    ax[0].legend(handles=scatter.legend_elements()[0], labels=['Fake', 'Real'])
+    ax[0].set_xlabel("PC1")
+    ax[0].set_ylabel("PC2")
+    ax[0].set_title(f'PCA for class {title}')
+    
     # plt.savefig(f'./results/{title}.png')
+    # plt.show()
+
+    # Visualize heatmap
+    sns.kdeplot(data=df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax[1], cmap="mako")
+    ax[1].set_title(f'Heatmap for class {title}')
     # plt.show()
 
 def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
