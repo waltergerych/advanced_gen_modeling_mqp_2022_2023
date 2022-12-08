@@ -38,24 +38,80 @@ def perform_pca(real, fake, title=None):
     components = pca.fit_transform(data.detach().numpy())
 
     # PCA projection to 2D
-    df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
+    pca_df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
+
+    # Get df for just real data
+    real_pca = PCA(n_components=1)
+    real_components = pca.fit_transform(real.detach().numpy())
+    real_data_df = pd.DataFrame(data=real_components, columns=['PC1', 'PC2'])
+
+    # Get df for just fake data
+    fake_pca = PCA(n_components=1)
+    fake_components = pca.fit_transform(fake.detach().numpy())
+    fake_data_df = pd.DataFrame(data=fake_components, columns=['PC1', 'PC2'])
 
     # visualize the 2D
-    fig, ax = plt.subplots(1, 2, figsize=(12, 6)) # ax[0]: scatterplot, ax[1]: heatmap
-    ax[0].set_facecolor('white')
-    scatter = ax[0].scatter(df['PC1'], df['PC2'], c=labels, alpha=.8, marker='.')
-    ax[0].legend(handles=scatter.legend_elements()[0], labels=['Fake', 'Real'])
-    ax[0].set_xlabel("PC1")
-    ax[0].set_ylabel("PC2")
-    ax[0].set_title(f'PCA for class {title}')
+    # fig, ax = plt.subplots(2, 2, figsize=(12, 12)) # ax[0]: scatterplot, ax[1]: heatmap\
+    # ax[0][0].set_facecolor('white')
+    # scatter = ax[0][0].scatter(df['PC1'], df['PC2'], c=labels, alpha=.8, marker='.')
+    # ax[0][0].legend(handles=scatter.legend_elements()[0], labels=['Fake', 'Real'])
+    # ax[0][0].set_xlabel("PC1")
+    # ax[0][0].set_ylabel("PC2")
+    # ax[0][0].set_title(f'PCA for class {title}')
     
-    # plt.savefig(f'./results/{title}.png')
+    # # plt.savefig(f'./results/{title}.png')
+    # # plt.show()
+
+    # # TODO: heatmap for both, real, and fake
+
+    # # Visualize heatmap for real + fake
+    # sns.kdeplot(data=df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax[1], cmap="mako")
+    # ax[1].set_title(f'Heatmap for class {title}')
+
+    # # Visualize heatmap for just real data
+    # sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax[2], cmap="mako")
+    # ax[2].set_title(f'Heatmap for class {title} (Real Only)')
     # plt.show()
 
-    # Visualize heatmap
-    sns.kdeplot(data=df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax[1], cmap="mako")
-    ax[1].set_title(f'Heatmap for class {title}')
-    # plt.show()
+    fig = plt.figure(figsize=(12, 10))
+
+    # Make top margin smaller on figure and add some padding between graphs
+    fig.subplots_adjust(top = 0.9, hspace=0.3)
+    
+    TITLE_FONT_SIZE = 15
+
+    # PCA Graph (Upper left)
+    ax = fig.add_subplot(2, 2, 1)
+    ax.set_facecolor('white')
+    scatter = ax.scatter(pca_df['PC1'], pca_df['PC2'], c=labels, alpha=.8, marker='.')
+    ax.legend(handles=scatter.legend_elements()[0], labels=['Fake', 'Real'])
+    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+    ax.set_title(f'PCA for class {title}', fontsize=TITLE_FONT_SIZE)
+
+    # Heatmap of PCA (Upper right)
+    ax = fig.add_subplot(2, 2, 2)
+    sns.kdeplot(data=pca_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+    ax.set_title(f'Heatmap for class {title}', fontsize=TITLE_FONT_SIZE)
+
+    # Heatmap of just real data (Lower left)
+    ax = fig.add_subplot(2, 2, 3)
+    sns.kdeplot(data=real_data_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+    ax.set_title(f'Heatmap for real {title} data', fontsize=TITLE_FONT_SIZE)
+
+    # Heatmap of just fake data (Lower right)
+    ax = fig.add_subplot(2, 2, 4)
+    sns.kdeplot(data=fake_data_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+    ax.set_title(f'Heatmap for fake {title} data', fontsize=TITLE_FONT_SIZE)
+
+    
+
 
 def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
     """ Perform a principal component analysis (PCA) on real and fake data and shows class subcategories
