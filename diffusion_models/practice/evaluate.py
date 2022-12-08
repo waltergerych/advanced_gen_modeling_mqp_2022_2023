@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 
 
 TITLE_FONT_SIZE = 15
-
+HEATMAP_ALPHA = 0.4
 
 def perform_pca(real, fake, title=None):
     """ Perform a principal component analysis (PCA) on the data and visualize on a 2D plane
@@ -44,37 +44,19 @@ def perform_pca(real, fake, title=None):
     pca_df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
 
     # Get df for just real data
-    real_pca = PCA(n_components=1)
-    real_components = pca.fit_transform(real.detach().numpy())
-    real_data_df = pd.DataFrame(data=real_components, columns=['PC1', 'PC2'])
+    # real_pca = PCA(n_components=2)
+    # real_components = real_pca.fit_transform(real.detach().numpy())
+    # real_data_df = pd.DataFrame(data=real_components, columns=['PC1', 'PC2'])
+    real_df = pca_df.head(len(real))
 
     # Get df for just fake data
-    fake_pca = PCA(n_components=1)
-    fake_components = pca.fit_transform(fake.detach().numpy())
-    fake_data_df = pd.DataFrame(data=fake_components, columns=['PC1', 'PC2'])
+    # fake_pca = PCA(n_components=2)
+    # fake_components = fake_pca.fit_transform(fake.detach().numpy())
+    # fake_data_df = pd.DataFrame(data=fake_components, columns=['PC1', 'PC2'])
+    fake_df = pca_df.tail(len(fake))
 
-    # visualize the 2D
-    # fig, ax = plt.subplots(2, 2, figsize=(12, 12)) # ax[0]: scatterplot, ax[1]: heatmap\
-    # ax[0][0].set_facecolor('white')
-    # scatter = ax[0][0].scatter(df['PC1'], df['PC2'], c=labels, alpha=.8, marker='.')
-    # ax[0][0].legend(handles=scatter.legend_elements()[0], labels=['Fake', 'Real'])
-    # ax[0][0].set_xlabel("PC1")
-    # ax[0][0].set_ylabel("PC2")
-    # ax[0][0].set_title(f'PCA for class {title}')
-    
-    # # plt.savefig(f'./results/{title}.png')
-    # # plt.show()
 
-    # # TODO: heatmap for both, real, and fake
 
-    # # Visualize heatmap for real + fake
-    # sns.kdeplot(data=df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax[1], cmap="mako")
-    # ax[1].set_title(f'Heatmap for class {title}')
-
-    # # Visualize heatmap for just real data
-    # sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax[2], cmap="mako")
-    # ax[2].set_title(f'Heatmap for class {title} (Real Only)')
-    # plt.show()
 
     fig = plt.figure(figsize=(12, 10))
 
@@ -89,6 +71,9 @@ def perform_pca(real, fake, title=None):
     ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
     ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
     ax.set_title(f'PCA for class {title}', fontsize=TITLE_FONT_SIZE)
+    # Get axis ranges 
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
 
     # Heatmap of PCA (Upper right)
     ax = fig.add_subplot(2, 2, 2)
@@ -96,20 +81,26 @@ def perform_pca(real, fake, title=None):
     ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
     ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
     ax.set_title(f'Heatmap for class {title}', fontsize=TITLE_FONT_SIZE)
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
 
     # Heatmap of just real data (Lower left)
     ax = fig.add_subplot(2, 2, 3)
-    sns.kdeplot(data=real_data_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+    sns.kdeplot(data=real_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
     ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
     ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
     ax.set_title(f'Heatmap for real {title} data', fontsize=TITLE_FONT_SIZE)
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
 
     # Heatmap of just fake data (Lower right)
     ax = fig.add_subplot(2, 2, 4)
-    sns.kdeplot(data=fake_data_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+    sns.kdeplot(data=fake_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
     ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
     ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
     ax.set_title(f'Heatmap for fake {title} data', fontsize=TITLE_FONT_SIZE)
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
 
     
 
@@ -152,6 +143,12 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
     ax.set_xlabel("PC1")
     ax.set_ylabel("PC2")
     ax.set_title("PCA with Real Data")
+    # Get axis ranges 
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+
+    # Overlay heatmap
+    sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
 
     # Fake data PCA all classes (Upper right)
     ax = fig.add_subplot(1, 2, 2)
@@ -161,47 +158,35 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
     ax.set_xlabel("PC1")
     ax.set_ylabel("PC2")
     ax.set_title("PCA with Fake Data")
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+
+    # Overlay heatmap
+    sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
 
     plt.show()
 
     # Second figure, heatmaps of PCA plots
-    fig = plt.figure(figsize=(16, 8))
+    # fig = plt.figure(figsize=(16, 8))
 
-    # Heatmap for real PCA all classes (Lower left)
-    ax = fig.add_subplot(1, 2, 1)
-    sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
-    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-    ax.set_title(f'Heatmap for real data', fontsize=TITLE_FONT_SIZE)
+    # # Heatmap for real PCA all classes (Lower left)
+    # ax = fig.add_subplot(1, 2, 1)
+    # sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+    # ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+    # ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+    # ax.set_title(f'Heatmap for real data', fontsize=TITLE_FONT_SIZE)
+    # ax.set_xlim(xmin, xmax)
+    # ax.set_ylim(ymin, ymax)
 
-    # Heatmap for fake PCA all classes (Lower left)
-    ax = fig.add_subplot(1, 2, 2)
-    sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
-    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-    ax.set_title(f'Heatmap for fake data', fontsize=TITLE_FONT_SIZE)
+    # # Heatmap for fake PCA all classes (Lower left)
+    # ax = fig.add_subplot(1, 2, 2)
+    # sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+    # ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+    # ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+    # ax.set_title(f'Heatmap for fake data', fontsize=TITLE_FONT_SIZE)
+    # ax.set_xlim(xmin, xmax)
+    # ax.set_ylim(ymin, ymax)
 
-    plt.show()
-
-    # Visualize 2D
-    # fig, ax = plt.subplots(figsize=(8, 8))
-    # ax.set_facecolor('white')
-
-    # scatter = plt.scatter(real['PC1'], real['PC2'], c=real_labels, alpha=.8, marker='.')
-    # plt.legend(handles=scatter.legend_elements()[0], labels=classes)
-    # plt.xlabel("PC1")
-    # plt.ylabel("PC2")
-    # plt.title("PCA with Real Data")
-    # plt.show()
-
-    # fig, ax = plt.subplots(figsize=(8, 8))
-    # ax.set_facecolor('white')
-
-    # scatter = plt.scatter(fake['PC1'], fake['PC2'], c=fake_labels, alpha=.8, marker='.')
-    # plt.legend(handles=scatter.legend_elements()[0], labels=classes)
-    # plt.xlabel("PC1")
-    # plt.ylabel("PC2")
-    # plt.title("PCA with Fake Data")
     # plt.show()
 
 def graph_two_features(real, fake, noise=None):
