@@ -12,7 +12,7 @@ from sklearn.decomposition import PCA
 from utils import *
 
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
@@ -350,11 +350,7 @@ def test_multiclass_classifier(model, data, labels):
     """
     data = data.detach().numpy()
     pred = model.predict(data)
-    accuracy = accuracy_score(labels, pred)
-    f1 = f1_score(labels, pred, average='weighted')
-    
-    print(f'Accuracy:\t{accuracy}')
-    print(f'F1:\t\t{f1}')
+    print(classification_report(labels, pred))
 
 def separability(real, fake, train_test_ratio):
     """Determines how separable real and fake data are from each other with a binary classifier
