@@ -18,6 +18,9 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 
 
+TITLE_FONT_SIZE = 15
+
+
 def perform_pca(real, fake, title=None):
     """ Perform a principal component analysis (PCA) on the data and visualize on a 2D plane
 
@@ -77,8 +80,6 @@ def perform_pca(real, fake, title=None):
 
     # Make top margin smaller on figure and add some padding between graphs
     fig.subplots_adjust(top = 0.9, hspace=0.3)
-    
-    TITLE_FONT_SIZE = 15
 
     # PCA Graph (Upper left)
     ax = fig.add_subplot(2, 2, 1)
@@ -139,26 +140,69 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
     real = pd.DataFrame(data=real_components, columns=['PC1', 'PC2'])
     fake = pd.DataFrame(data=fake_components, columns=['PC1', 'PC2'])
 
-    # Visualize 2D
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.set_facecolor('white')
 
+    # First figure, PCA plots
+    fig = plt.figure(figsize=(16, 8))
+
+    # Real data PCA all classes (Upper left)
+    ax = fig.add_subplot(1, 2, 1)
+    ax.set_facecolor('white')
     scatter = plt.scatter(real['PC1'], real['PC2'], c=real_labels, alpha=.8, marker='.')
-    plt.legend(handles=scatter.legend_elements()[0], labels=classes)
-    plt.xlabel("PC1")
-    plt.ylabel("PC2")
-    plt.title("PCA with Real Data")
-    plt.show()
+    ax.legend(handles=scatter.legend_elements()[0], labels=classes)
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+    ax.set_title("PCA with Real Data")
 
-    fig, ax = plt.subplots(figsize=(8, 8))
+    # Fake data PCA all classes (Upper right)
+    ax = fig.add_subplot(1, 2, 2)
     ax.set_facecolor('white')
+    scatter = plt.scatter(fake['PC1'], fake['PC2'], c=real_labels, alpha=.8, marker='.')
+    ax.legend(handles=scatter.legend_elements()[0], labels=classes)
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+    ax.set_title("PCA with Fake Data")
 
-    scatter = plt.scatter(fake['PC1'], fake['PC2'], c=fake_labels, alpha=.8, marker='.')
-    plt.legend(handles=scatter.legend_elements()[0], labels=classes)
-    plt.xlabel("PC1")
-    plt.ylabel("PC2")
-    plt.title("PCA with Fake Data")
     plt.show()
+
+    # Second figure, heatmaps of PCA plots
+    fig = plt.figure(figsize=(16, 8))
+
+    # Heatmap for real PCA all classes (Lower left)
+    ax = fig.add_subplot(1, 2, 1)
+    sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+    ax.set_title(f'Heatmap for real data', fontsize=TITLE_FONT_SIZE)
+
+    # Heatmap for fake PCA all classes (Lower left)
+    ax = fig.add_subplot(1, 2, 2)
+    sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+    ax.set_title(f'Heatmap for fake data', fontsize=TITLE_FONT_SIZE)
+
+    plt.show()
+
+    # Visualize 2D
+    # fig, ax = plt.subplots(figsize=(8, 8))
+    # ax.set_facecolor('white')
+
+    # scatter = plt.scatter(real['PC1'], real['PC2'], c=real_labels, alpha=.8, marker='.')
+    # plt.legend(handles=scatter.legend_elements()[0], labels=classes)
+    # plt.xlabel("PC1")
+    # plt.ylabel("PC2")
+    # plt.title("PCA with Real Data")
+    # plt.show()
+
+    # fig, ax = plt.subplots(figsize=(8, 8))
+    # ax.set_facecolor('white')
+
+    # scatter = plt.scatter(fake['PC1'], fake['PC2'], c=fake_labels, alpha=.8, marker='.')
+    # plt.legend(handles=scatter.legend_elements()[0], labels=classes)
+    # plt.xlabel("PC1")
+    # plt.ylabel("PC2")
+    # plt.title("PCA with Fake Data")
+    # plt.show()
 
 def graph_two_features(real, fake, noise=None):
     """ Graphs real and fake data with only two features
