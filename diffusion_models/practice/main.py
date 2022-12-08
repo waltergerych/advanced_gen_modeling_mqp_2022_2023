@@ -2,7 +2,6 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.datasets import make_checkerboard,make_circles,make_moons,make_s_curve,make_swiss_roll
 from helper_plot import hdr_plot_style
 import torch
 import torch.optim as optim
@@ -16,34 +15,8 @@ from classifier import *
 from diffusion import *
 from gan import *
 
+# Set plot style
 hdr_plot_style()
-swiss_roll, _ = make_swiss_roll(10**4,noise=0.1)
-swiss_roll = swiss_roll[:, [0, 2]]/10.0
-
-s_curve, _= make_s_curve(10**4, noise=0.1)
-s_curve = s_curve[:, [0, 2]]/10.0
-
-moons, _ = make_moons(10**4, noise=0.1)
-
-data = s_curve.T
-dataset = torch.Tensor(data.T).float()
-
-
-# fig,axes = plt.subplots(1,3,figsize=(20,5))
-
-# axes[0].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=5)
-# axes[0].axis('off')
-
-# data = swiss_roll.T
-# axes[1].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=5)
-# axes[1].axis('off')
-# # dataset = torch.Tensor(data.T).float()
-
-# data = moons.T
-# axes[2].scatter(*data, alpha=0.5, color='white', edgecolor='gray', s=3)
-# axes[2].axis('off')
-# # dataset = torch.Tensor(data.T).float()
-# plt.show()
 
 # load the datasets
 train_x, train_y = load_data('../../dataset/UCI_HAR_Dataset', 'train')
@@ -56,7 +29,6 @@ dataset = train_x
 
 # Define the number of features from the dataset to use. Must be 561 or less
 num_features = 40
-num_datapoints = 10
 
 # Select only the first x features
 dataset = dataset[:, :num_features]
@@ -67,12 +39,16 @@ NUM_REVERSE_STEPS = 10000
 # Number of graphs to plot to show the addition of noise over time (not including X_0)
 NUM_DIVS = 10
 
-# Normal diffusion for dataset
+################
+### TRAINING ###
+################
+
+# # Normal diffusion for entire dataset
 # diffusion = forward_diffusion(dataset, NUM_STEPS, plot=False)
 # model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False)
 # torch.save(model.state_dict(), f'./models/test_model.pth')
 
-# Makes diffusion model for each class for the Classifier
+# # Makes diffusion model for each class for the Classifier
 # models = []
 # diffusions = []
 
@@ -89,9 +65,6 @@ NUM_DIVS = 10
 
 #     torch.save(model.state_dict(), f'./models/model_40_{i}.pth')
 
-# model = ConditionalModel(NUM_STEPS, dataset.size(1))
-# model.load_state_dict(torch.load('./models/har_diffusion.pth'))
-
 ##################
 ### EVALUATION ###
 ##################
@@ -99,10 +72,12 @@ NUM_DIVS = 10
 labels = test_y
 dataset = test_x
 dataset = dataset[:, :num_features]
+
 input_size = dataset.shape[1]
 num_to_gen = 150
 test_train_ratio = .3
 
+# Gan variables
 generator_input_size = 128
 hidden_size = 512
 
