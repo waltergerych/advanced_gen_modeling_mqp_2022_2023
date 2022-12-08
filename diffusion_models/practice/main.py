@@ -152,7 +152,7 @@ diffusion_data, diffusion_labels = torch.cat(diffusion_data), torch.cat(diffusio
 gan_data, gan_labels = torch.cat(gan_data), torch.cat(gan_labels)
 
 # Do PCA analysis for fake/real and subclasses
-pca_with_classes(dataset, labels, diffusion_data, diffusion_labels, classes)
+pca_with_classes(dataset, labels, diffusion_data, diffusion_labels, classes, overlay_heatmap=False)
 
 # Show PCA for each class
 for i in range(len(classes)):

@@ -105,7 +105,7 @@ def perform_pca(real, fake, title=None):
     
 
 
-def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
+def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, overlay_heatmap=True):
     """ Perform a principal component analysis (PCA) on real and fake data and shows class subcategories
 
     Args:
@@ -148,12 +148,12 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
     ymin, ymax = ax.get_ylim()
 
     # Overlay heatmap
-    sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
+    if overlay_heatmap: sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
 
     # Fake data PCA all classes (Upper right)
     ax = fig.add_subplot(1, 2, 2)
     ax.set_facecolor('white')
-    scatter = plt.scatter(fake['PC1'], fake['PC2'], c=real_labels, alpha=.8, marker='.')
+    scatter = plt.scatter(fake['PC1'], fake['PC2'], c=fake_labels, alpha=.8, marker='.')
     ax.legend(handles=scatter.legend_elements()[0], labels=classes)
     ax.set_xlabel("PC1")
     ax.set_ylabel("PC2")
@@ -162,7 +162,7 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes):
     ax.set_ylim(ymin, ymax)
 
     # Overlay heatmap
-    sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
+    if overlay_heatmap: sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
 
     plt.show()
 
