@@ -166,28 +166,29 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, ov
 
     plt.show()
 
-    # Second figure, heatmaps of PCA plots
-    # fig = plt.figure(figsize=(16, 8))
+    if not overlay_heatmap:
+        # Second figure, heatmaps of PCA plots
+        fig = plt.figure(figsize=(16, 8))
 
-    # # Heatmap for real PCA all classes (Lower left)
-    # ax = fig.add_subplot(1, 2, 1)
-    # sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
-    # ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-    # ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-    # ax.set_title(f'Heatmap for real data', fontsize=TITLE_FONT_SIZE)
-    # ax.set_xlim(xmin, xmax)
-    # ax.set_ylim(ymin, ymax)
+        # Heatmap for real PCA all classes (Lower left)
+        ax = fig.add_subplot(1, 2, 1)
+        sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+        ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+        ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+        ax.set_title(f'Heatmap for real data', fontsize=TITLE_FONT_SIZE)
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
 
-    # # Heatmap for fake PCA all classes (Lower left)
-    # ax = fig.add_subplot(1, 2, 2)
-    # sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
-    # ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-    # ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-    # ax.set_title(f'Heatmap for fake data', fontsize=TITLE_FONT_SIZE)
-    # ax.set_xlim(xmin, xmax)
-    # ax.set_ylim(ymin, ymax)
+        # Heatmap for fake PCA all classes (Lower left)
+        ax = fig.add_subplot(1, 2, 2)
+        sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
+        ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+        ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+        ax.set_title(f'Heatmap for fake data', fontsize=TITLE_FONT_SIZE)
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
 
-    # plt.show()
+        plt.show()
 
 def graph_two_features(real, fake, noise=None):
     """ Graphs real and fake data with only two features
