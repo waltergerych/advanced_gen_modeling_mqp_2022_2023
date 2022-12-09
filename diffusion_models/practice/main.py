@@ -6,8 +6,10 @@ from helper_plot import hdr_plot_style
 import torch
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
-from utils import * 
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.feature_selection import SelectKBest
 
+from utils import * 
 from model import ConditionalModel
 from ema import EMA
 from evaluate import *
@@ -28,27 +30,30 @@ labels = train_y
 dataset = train_x
 
 # Define the number of features from the dataset to use. Must be 561 or less
-num_features = 40
-
-# Select only the first x features
-dataset = dataset[:, :num_features]
-
+NUM_FEATURES = 40
 # Number of time steps
-NUM_STEPS = 100
+NUM_STEPS = 500
+# Number of training steps to do in reverse diffusion (epochs)
 NUM_REVERSE_STEPS = 10000
 # Number of graphs to plot to show the addition of noise over time (not including X_0)
-NUM_DIVS = 10
+NUM_DIVS = 10 
+
+# Use feature selection to select most important features
+feature_selector = SelectKBest(k=NUM_FEATURES)
+importance = feature_selector.fit(dataset, labels)
+features = importance.transform(dataset)
+dataset = torch.tensor(features)
 
 ################
 ### TRAINING ###
 ################
 
-# # Normal diffusion for entire dataset
+# Normal diffusion for entire dataset
 # diffusion = forward_diffusion(dataset, NUM_STEPS, plot=False)
 # model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False)
 # torch.save(model.state_dict(), f'./models/test_model.pth')
 
-# # Makes diffusion model for each class for the Classifier
+# Makes diffusion model for each class for the Classifier
 # models = []
 # diffusions = []
 
@@ -63,15 +68,15 @@ NUM_DIVS = 10
 #     models.append(model)
 #     diffusions.append(diffusion)
 
-#     torch.save(model.state_dict(), f'./models/model_40_{i}.pth')
+#     torch.save(model.state_dict(), f'./models/r{NUM_STEPS}_10K_model_best40_{i}.pth')
 
 ##################
 ### EVALUATION ###
 ##################
 
 labels = test_y
-dataset = test_x
-dataset = dataset[:, :num_features]
+features = importance.transform(test_x)
+dataset = torch.tensor(features)
 
 input_size = dataset.shape[1]
 num_to_gen = 150
@@ -97,7 +102,7 @@ ddpm = get_denoising_variables(NUM_STEPS)
 for i in range(len(classes)):
     # Load trained diffusion model
     model = ConditionalModel(NUM_STEPS, dataset.size(1))
-    model.load_state_dict(torch.load(f'./models/model_40_{i}.pth'))
+    model.load_state_dict(torch.load(f'./models/r{NUM_STEPS}_10K_model_best40_{i}.pth'))
 
     # Load trained GAN model
     generator = Generator(generator_input_size, hidden_size, dataset.size(1))
@@ -142,8 +147,8 @@ binary_machine_evaluation(dataset, labels, diffusion_data, diffusion_labels, cla
 multiclass_machine_evaluation(dataset, labels, diffusion_data, diffusion_labels, test_train_ratio)
 separability(dataset, diffusion_data, test_train_ratio)
 
-print('Testing data from gan model')
-binary_machine_evaluation(dataset, labels, gan_data, gan_labels, classes, test_train_ratio)
-multiclass_machine_evaluation(dataset, labels, gan_data, gan_labels, test_train_ratio)
-separability(dataset, gan_data, test_train_ratio)
+# print('Testing data from gan model')
+# binary_machine_evaluation(dataset, labels, gan_data, gan_labels, classes, test_train_ratio)
+# multiclass_machine_evaluation(dataset, labels, gan_data, gan_labels, test_train_ratio)
+# separability(dataset, gan_data, test_train_ratio)
 
