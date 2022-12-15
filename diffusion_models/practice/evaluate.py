@@ -301,7 +301,7 @@ def downsample(data, labels, target_index, classes):
     new_data = torch.cat([target, sample])
     new_labels = torch.cat([torch.ones(target.shape[0]), torch.zeros(sample.shape[0])])
 
-    return new_data.detach().numpy(), new_labels
+    return new_data, new_labels
 
 def build_binary_classifier(data, labels, classes, class_index):
     """Builds a random forest classifier to decide whether or not data belongs to the specified class
@@ -350,7 +350,8 @@ def test_binary_classifier(classifier, data, labels, classes, class_index, print
         recall (float)
         f1-score (float)
     """
-    data, test_labels = downsample(data, labels, class_index, classes)
+    data, test_labels = torch.eq(labels, torch.ones(data.size(0))*class_index).int()
+    data = data.detach().numpy()
     pred = classifier.predict(data)
 
     accuracy, precision, recall, f1 = score(test_labels, pred)
