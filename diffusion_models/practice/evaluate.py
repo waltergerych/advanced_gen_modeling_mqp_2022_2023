@@ -150,8 +150,13 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, ov
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
 
+    custom_xlim = (xmin, xmax)
+    custom_ylim = (ymin, ymax)
+
     # Overlay heatmap
     if overlay_heatmap: sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
+    # Change axis limits
+    plt.setp(ax, xlim=custom_xlim, ylim=custom_ylim)
 
     # Fake data PCA all classes (Upper right)
     ax = fig.add_subplot(1, 2, 2)
@@ -161,11 +166,11 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, ov
     ax.set_xlabel("PC1")
     ax.set_ylabel("PC2")
     ax.set_title("PCA with Fake Data")
-    ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
 
     # Overlay heatmap
     if overlay_heatmap: sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
+    # Change axis limits
+    plt.setp(ax, xlim=custom_xlim, ylim=custom_ylim)
 
     plt.show()
 
