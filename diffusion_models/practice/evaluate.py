@@ -134,7 +134,6 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, ov
     real = pd.DataFrame(data=real_components, columns=['PC1', 'PC2'])
     fake = pd.DataFrame(data=fake_components, columns=['PC1', 'PC2'])
 
-
     # First figure, PCA plots
     fig = plt.figure(figsize=(16, 8))
 
@@ -275,6 +274,35 @@ def score(labels, pred):
 
     return accuracy, precision, recall, f1
 
+def downsample(data, labels, target_index, classes):
+    """Downsamples data so one class is half the data set
+
+    Args:
+        data (torch.Tensor): the data to downsample
+        labels (torch.Tensor): the labels for the data
+        target_index (int): target class index, an integer 0-5
+        classes (list<string>): a list of the classes
+    
+    Returns:
+        new_data (torch.Tensor): the balanced data set
+        new_labels (torch.Tensor): the labels for the new data, where 1 is the target class and 0 is all other classes
+    """
+    target, _ = get_activity_data(data, labels, target_index)
+    remaining = []
+    for i in range(len(classes)):
+        if i is not target_index:
+            remaining.append(get_activity_data(data, labels, i)[0])
+    remaining = torch.cat(remaining)
+
+    idx = torch.randperm(remaining.shape[0])
+    batch = idx[:target.shape[0]]
+    sample = remaining[batch]
+
+    new_data = torch.cat([target, sample])
+    new_labels = torch.cat([torch.ones(target.shape[0]), torch.zeros(sample.shape[0])])
+
+    return new_data.detach().numpy(), new_labels
+
 def build_binary_classifier(data, labels, classes, class_index):
     """Builds a random forest classifier to decide whether or not data belongs to the specified class
 
@@ -290,8 +318,8 @@ def build_binary_classifier(data, labels, classes, class_index):
         model (RandomForestClassifier): the trained classifier model
     """
     model = RandomForestClassifier(max_depth=10)
-    train_labels = torch.eq(labels, torch.ones(data.size(0))*class_index).int()
-    model.fit(data.detach().numpy(), train_labels)
+    train_data, train_labels = downsample(data, labels, class_index, classes)
+    model.fit(train_data.detach().numpy(), train_labels)
     # joblib.dump(model, f'./classifiers/rf_{class_index}.joblib', compress=3)
 
     return model
@@ -305,7 +333,7 @@ def load_binary_classifier(path):
     model = joblib.load(path)
     return model
 
-def test_binary_classifier(classifier, data, labels, classes, class_index):
+def test_binary_classifier(classifier, data, labels, classes, class_index, print_results=False):
     """Runs machine evaluation using a binary classifier to decide whether data belongs to the specified class
 
     Args:
@@ -314,6 +342,7 @@ def test_binary_classifier(classifier, data, labels, classes, class_index):
         labels (torch.Tensor): the labels for the data
         classes (list): a list of all possible classes
         class_index (int): the index of the desired class to test for
+        print_results (bool): If true, will print confusion matrix, accuracy, and f1 to console
 
     Returns:
         accuracy (float)
@@ -321,15 +350,15 @@ def test_binary_classifier(classifier, data, labels, classes, class_index):
         recall (float)
         f1-score (float)
     """
-    test_labels = torch.eq(labels, torch.ones(data.size(0))*class_index).int()
-    data = data.detach().numpy()
+    data, test_labels = downsample(data, labels, class_index, classes)
     pred = classifier.predict(data)
 
     accuracy, precision, recall, f1 = score(test_labels, pred)
 
-    print(confusion_matrix(test_labels, pred))
-    print(f'Accuracy:\t{accuracy}')
-    print(f'F1:\t\t{f1}')
+    if print_results:
+        print(confusion_matrix(test_labels, pred))
+        print(f'Accuracy:\t{accuracy}')
+        print(f'F1:\t\t{f1}')
 
     return accuracy, precision, recall, f1
 
@@ -398,7 +427,7 @@ def separability(real, fake, train_test_ratio):
     return model
 
 def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_train_ratio, num_steps):
-    """Evaluates data on binary classifiers
+    """Evaluates data on binary classifiers and saves to csv
 
     Args:
         dataset (torch.Tensor): the real data
@@ -407,6 +436,7 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
         fake_labels (torch.Tensor): the labels for the fake data
         classes (list<strings>): a list of the possible classes
         test_train_ratio (float): a decimal value between 0 and 1 for the ratio of which to split test and train data
+        num_steps (int): the number of forward steps in the diffusion model
     """
     # Split into testing and training for classifier
     real_train_x, real_test_x, real_train_y, real_test_y = train_test_split(dataset, labels, test_size=test_train_ratio)
