@@ -350,7 +350,7 @@ def test_binary_classifier(classifier, data, labels, classes, class_index, print
         recall (float)
         f1-score (float)
     """
-    data, test_labels = torch.eq(labels, torch.ones(data.size(0))*class_index).int()
+    test_labels = torch.eq(labels, torch.ones(data.size(0))*class_index).int()
     data = data.detach().numpy()
     pred = classifier.predict(data)
 
@@ -397,7 +397,7 @@ def test_multiclass_classifier(model, data, labels):
     """
     data = data.detach().numpy()
     pred = model.predict(data)
-    print(classification_report(labels, pred))
+    print(classification_report(labels, pred, digits=3))
 
 def separability(real, fake, train_test_ratio):
     """Determines how separable real and fake data are from each other with a binary classifier
