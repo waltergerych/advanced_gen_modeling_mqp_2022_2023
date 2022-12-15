@@ -143,7 +143,7 @@ plt.show()
 
 # Machine evaluation for diffusion and GAN data
 print('Testing data from diffusion model')
-binary_machine_evaluation(dataset, labels, diffusion_data, diffusion_labels, classes, test_train_ratio)
+binary_machine_evaluation(dataset, labels, diffusion_data, diffusion_labels, classes, test_train_ratio, num_steps=NUM_STEPS)
 multiclass_machine_evaluation(dataset, labels, diffusion_data, diffusion_labels, test_train_ratio)
 separability(dataset, diffusion_data, test_train_ratio)
 

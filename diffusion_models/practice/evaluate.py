@@ -21,9 +21,7 @@ from sklearn.model_selection import train_test_split
 
 TITLE_FONT_SIZE = 15
 HEATMAP_ALPHA = 0.4
-# Save location of classifier data
-CLASSIFIER_DATA_SAVE_NAME = "binary_classifier_data"
-
+CLASSIFIER_DATA_PATH = "classifier_data"
 
 
 def perform_pca(real, fake, title=None):
@@ -394,7 +392,7 @@ def separability(real, fake, train_test_ratio):
 
     return model
 
-def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_train_ratio):
+def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_train_ratio, num_steps):
     """Evaluates data on binary classifiers
 
     Args:
@@ -489,16 +487,16 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
     # Write data to csv
     for metric in csv_data["real"]["real"]:
         flag = "a"
-        file_name = f"{CLASSIFIER_DATA_SAVE_NAME}_{metric}.csv"
+        file_name = f"{CLASSIFIER_DATA_PATH}/binary_classifier_{metric}.csv"
         if not os.path.exists(file_name): flag = "w"
             
         with open(file_name, flag) as csv_file:
             csv_writer = csv.writer(csv_file)
             # Write headers
-            if flag == "w": csv_writer.writerow(["Trained On", "Tested Against", classes[0], classes[1], classes[2], classes[3], classes[4], classes[5]])
+            if flag == "w": csv_writer.writerow(["Trained On", "Tested Against", "Num Stpes", classes[0], classes[1], classes[2], classes[3], classes[4], classes[5]])
             for train in csv_data:
                 for test in csv_data[train]:
-                    csv_row = [train, test]
+                    csv_row = [train, test, num_steps]
                     for i in range(len(classes)):
                         csv_row.append(csv_data[train][test][metric][i])
                     csv_writer.writerow(csv_row)
