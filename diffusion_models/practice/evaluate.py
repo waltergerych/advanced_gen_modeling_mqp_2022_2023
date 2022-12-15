@@ -10,6 +10,7 @@ import seaborn as sns
 
 from sklearn.decomposition import PCA
 from utils import *
+import csv
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, classification_report
@@ -20,6 +21,10 @@ from sklearn.model_selection import train_test_split
 
 TITLE_FONT_SIZE = 15
 HEATMAP_ALPHA = 0.4
+# Save location of classifier data
+CLASSIFIER_DATA_SAVE_NAME = "binary_classifier_data"
+
+
 
 def perform_pca(real, fake, title=None):
     """ Perform a principal component analysis (PCA) on the data and visualize on a 2D plane
@@ -306,6 +311,12 @@ def test_binary_classifier(classifier, data, labels, classes, class_index):
         labels (torch.Tensor): the labels for the data
         classes (list): a list of all possible classes
         class_index (int): the index of the desired class to test for
+
+    Returns:
+        accuracy (float)
+        precision (float)
+        recall (float)
+        f1-score (float)
     """
     test_labels = torch.eq(labels, torch.ones(data.size(0))*class_index).int()
     data = data.detach().numpy()
@@ -316,6 +327,8 @@ def test_binary_classifier(classifier, data, labels, classes, class_index):
     print(confusion_matrix(test_labels, pred))
     print(f'Accuracy:\t{accuracy}')
     print(f'F1:\t\t{f1}')
+
+    return accuracy, precision, recall, f1
 
 def build_multiclass_classifier(data, labels):
     """Builds a mulitclass classifier to predict whether data is one of:
@@ -396,6 +409,40 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
     real_train_x, real_test_x, real_train_y, real_test_y = train_test_split(dataset, labels, test_size=test_train_ratio)
     fake_train_x, fake_test_x, fake_train_y, fake_test_y = train_test_split(fake, fake_labels, test_size=test_train_ratio)
 
+    # Store data for writing to csv
+    csv_data = {
+        # Trained on real
+        "real": {
+            # Tested on real
+            "real": {
+                "acc": [],
+                "precision": [],
+                "recall": [],
+                "f1": []
+            },
+            "fake": {
+                "acc": [],
+                "precision": [],
+                "recall": [],
+                "f1": []
+            }
+        },
+        "fake": {
+            "real": {
+                "acc": [],
+                "precision": [],
+                "recall": [],
+                "f1": []
+            },
+            "fake": {
+                "acc": [],
+                "precision": [],
+                "recall": [],
+                "f1": []
+            }
+        },
+    }
+
     for i in range(len(classes)):
         print(f'\nEvaluating class {classes[i]}')
 
@@ -403,21 +450,60 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
         print('Testing classifier trained on real data')
         classifier = build_binary_classifier(real_train_x, real_train_y, classes, i)
         
+        # Train on real, test on real
         print('Evaluating on real data')
-        test_binary_classifier(classifier, real_test_x, real_test_y, classes, i)
+        acc, precision, recall, f1 = test_binary_classifier(classifier, real_test_x, real_test_y, classes, i)
+        csv_data["real"]["real"]["acc"].append(acc)
+        csv_data["real"]["real"]["precision"].append(precision)
+        csv_data["real"]["real"]["recall"].append(recall)
+        csv_data["real"]["real"]["f1"].append(f1)
 
+        # Train on real, test on fake
         print('Evaluating on fake data')
-        test_binary_classifier(classifier, fake_test_x, fake_test_y, classes, i)
+        acc, precision, recall, f1 = test_binary_classifier(classifier, fake_test_x, fake_test_y, classes, i)
+        csv_data["real"]["fake"]["acc"].append(acc)
+        csv_data["real"]["fake"]["precision"].append(precision)
+        csv_data["real"]["fake"]["recall"].append(recall)
+        csv_data["real"]["fake"]["f1"].append(f1)
 
         # Train classifier on diffusion model generated data
         print('Testing classifier trained on fake data')
         classifier = build_binary_classifier(fake_train_x, fake_train_y, classes, i)
 
+        # Train on fake, test on real
         print('Evaluating on real data')
-        test_binary_classifier(classifier, real_test_x, real_test_y, classes, i)
+        acc, precision, recall, f1 = test_binary_classifier(classifier, real_test_x, real_test_y, classes, i)
+        csv_data["fake"]["real"]["acc"].append(acc)
+        csv_data["fake"]["real"]["precision"].append(precision)
+        csv_data["fake"]["real"]["recall"].append(recall)
+        csv_data["fake"]["real"]["f1"].append(f1)
 
+        # Train on fake, test on fake
         print('Evaluating on fake data')
-        test_binary_classifier(classifier, fake_test_x, fake_test_y, classes, i)
+        acc, precision, recall, f1 = test_binary_classifier(classifier, fake_test_x, fake_test_y, classes, i)
+        csv_data["fake"]["fake"]["acc"].append(acc)
+        csv_data["fake"]["fake"]["precision"].append(precision)
+        csv_data["fake"]["fake"]["recall"].append(recall)
+        csv_data["fake"]["fake"]["f1"].append(f1)
+
+    # Write data to csv
+    for metric in csv_data["real"]["real"]:
+        flag = "a"
+        file_name = f"{CLASSIFIER_DATA_SAVE_NAME}_{metric}.csv"
+        if not os.path.exists(file_name): flag = "w"
+            
+        with open(file_name, flag) as csv_file:
+            csv_writer = csv.writer(csv_file)
+            # Write headers
+            if flag == "w": csv_writer.writerow(["Trained On", "Tested Against", classes[0], classes[1], classes[2], classes[3], classes[4], classes[5]])
+            for train in csv_data:
+                for test in csv_data[train]:
+                    csv_row = [train, test]
+                    for i in range(len(classes)):
+                        csv_row.append(csv_data[train][test][metric][i])
+                    csv_writer.writerow(csv_row)
+                            
+            
 
 def multiclass_machine_evaluation(dataset, labels, fake, fake_labels, test_train_ratio):
     """Evaluates data multiclass classifiers and prints results
