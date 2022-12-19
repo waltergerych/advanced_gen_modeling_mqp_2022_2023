@@ -7,6 +7,7 @@ import os
 import numpy as np
 import torch
 import pandas as pd
+from random import choices
 
 def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2):
     if schedule == 'linear':
@@ -19,10 +20,22 @@ def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2
     return betas
 
 def extract(input, t, x):
+    """Extracts a single value from input at step t and reshapes using x.
+    Used in the diffusion process
+
+    Args:
+        input (torch.Tensor): the input to extract from
+        t (torch.Tensor): a tensor with a single element representing the time step to index the input
+        x (torch.Tensor): the real data.  Only used for the shape
+    """
     shape = x.shape
     out = torch.gather(input, 0, t.to(input.device))
     reshape = [t.shape[0]] + [1] * (len(shape) - 1)
     return out.reshape(*reshape)
+
+def log_1_min_a(a):
+    """Used for calculating categorical noise variables"""
+    return torch.log(1 - a.exp() + 1e-40)
 
 def q_posterior_mean_variance(x_0, x_t, t,posterior_mean_coef_1,posterior_mean_coef_2,posterior_log_variance_clipped):
     coef_1 = extract(posterior_mean_coef_1, t, x_0)
@@ -80,10 +93,12 @@ def discretized_gaussian_log_likelihood(x, means, log_scales):
     return log_probs
 
 def normal_kl(mean1, logvar1, mean2, logvar2):
+    """Calculates KL divergence for loss function"""
     kl = 0.5 * (-1.0 + logvar2 - logvar1 + torch.exp(logvar1 - logvar2) + ((mean1 - mean2) ** 2) * torch.exp(-logvar2))
     return kl
 
 def q_sample(x_0, t, alphas_bar_sqrt, one_minus_alphas_bar_sqrt ,noise=None):
+    """Samples q(t)"""
     if noise is None:
         noise = torch.randn_like(x_0)
     alphas_t = extract(alphas_bar_sqrt, t, x_0)
@@ -125,6 +140,45 @@ def noise_estimation_loss(model, x_0,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,n
     x = x_0 * a + e * am1
     output = model(x, t)
     return (e - output).square().mean()
+
+def extract_cat(a, t, x_shape):
+    b, *_ = t.shape
+    out = a.gather(-1, t)
+    return out.reshape(b, *((1,) * (len(x_shape) - 1)))
+
+def log_add_exp(a, b):
+    maximum = torch.max(a, b)
+    return maximum + torch.log(torch.exp(a - maximum) + torch.exp(b - maximum))
+
+def q_x_cat(data, t, diffs):
+    """Adds noise to categorical data
+
+    Args:
+        data (torch.Tensor): the categorical data
+        t (torch.Tensor): the number of time steps of noise to add
+        diffs (Diffusion): the class encapsulating the diffusion variables
+    """
+    # Get all categorical classes and the size of the data
+    classes = get_classes(data)
+    K = classes.shape[0]
+    size = data.shape[0]
+
+    # Get probability distribution, add noise, and sample from distribution again
+    probs = get_probs(data, classes)
+    log_cumprod_alpha_t = extract_cat(diffs.log_cumprod_alpha, t, probs.shape)
+    log_1_min_cumprod_alpha = extract_cat(diffs.log_1_min_cumprod_alpha, t, probs.shape)
+    log_probs = log_add_exp(probs + log_cumprod_alpha_t, log_1_min_cumprod_alpha - np.log(K))
+    data = torch.stack(choices(classes, weights=log_probs, k=size))
+    return data
+
+def get_probs(data, K):
+    """Calculate probablity distribution for given data with K classes"""
+    totals = data.squeeze().bincount(minlength=K)
+    return totals / torch.sum(totals)
+
+def get_classes(data):
+    """Finds all the classes in the data"""
+    return data.unique(return_counts=True)[0]
 
 def get_model_output(model, input_size, diffusion, num_steps, num_to_gen):
     """Gets the output of the model

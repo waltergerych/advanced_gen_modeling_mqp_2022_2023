@@ -32,7 +32,7 @@ dataset = train_x
 # Define the number of features from the dataset to use. Must be 561 or less
 NUM_FEATURES = 40
 # Number of time steps
-NUM_STEPS = 2000
+NUM_STEPS = 500
 # Number of training steps to do in reverse diffusion (epochs)
 NUM_REVERSE_STEPS = 10000
 # Number of graphs to plot to show the addition of noise over time (not including X_0)
@@ -49,26 +49,26 @@ dataset = torch.tensor(features)
 ################
 
 # Normal diffusion for entire dataset
-# diffusion = forward_diffusion(dataset, NUM_STEPS, plot=False)
-# model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False)
-# torch.save(model.state_dict(), f'./models/test_model.pth')
+diffusion = forward_diffusion(dataset, NUM_STEPS, plot=False)
+model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False)
+torch.save(model.state_dict(), f'./models/test_model.pth')
 
-# # Makes diffusion model for each class for the Classifier
-# models = []
-# diffusions = []
+# Makes diffusion model for each class for the Classifier
+models = []
+diffusions = []
 
-# original_data, original_labels = dataset, labels
+original_data, original_labels = dataset, labels
 
-# for i in range(len(classes)):
-#     dataset, labels = get_activity_data(original_data, original_labels, i)
+for i in range(len(classes)):
+    dataset, labels = get_activity_data(original_data, original_labels, i)
 
-#     diffusion = forward_diffusion(dataset, NUM_STEPS, plot=False)
-#     print("Starting training for class " + str(classes[i]))
-#     model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False)
-#     models.append(model)
-#     diffusions.append(diffusion)
+    diffusion = forward_diffusion(dataset, NUM_STEPS, plot=False)
+    print("Starting training for class " + str(classes[i]))
+    model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False)
+    models.append(model)
+    diffusions.append(diffusion)
 
-#     torch.save(model.state_dict(), f'./models/r{NUM_STEPS}_10K_model_best40_{i}.pth')
+    torch.save(model.state_dict(), f'./models/r{NUM_STEPS}_10K_model_best40_{i}.pth')
 
 ##################
 ### EVALUATION ###
@@ -134,7 +134,7 @@ gan_data, gan_labels = torch.cat(gan_data), torch.cat(gan_labels)
 # Do PCA analysis for fake/real and subclasses
 pca_with_classes(dataset, labels, diffusion_data, diffusion_labels, classes, overlay_heatmap=True)
 
-# Show PCA for each class
+# # Show PCA for each class
 for i in range(len(classes)):
     true_batch, true_labels = get_activity_data(dataset, labels, i)
     fake_batch, fake_labels = get_activity_data(diffusion_data, diffusion_labels, i)
@@ -147,8 +147,8 @@ binary_machine_evaluation(dataset, labels, diffusion_data, diffusion_labels, cla
 multiclass_machine_evaluation(dataset, labels, diffusion_data, diffusion_labels, test_train_ratio)
 separability(dataset, diffusion_data, test_train_ratio)
 
-# print('Testing data from gan model')
-# binary_machine_evaluation(dataset, labels, gan_data, gan_labels, classes, test_train_ratio)
-# multiclass_machine_evaluation(dataset, labels, gan_data, gan_labels, test_train_ratio)
-# separability(dataset, gan_data, test_train_ratio)
+print('Testing data from gan model')
+binary_machine_evaluation(dataset, labels, gan_data, gan_labels, classes, test_train_ratio)
+multiclass_machine_evaluation(dataset, labels, gan_data, gan_labels, test_train_ratio)
+separability(dataset, gan_data, test_train_ratio)
 

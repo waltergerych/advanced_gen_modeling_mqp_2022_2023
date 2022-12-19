@@ -26,6 +26,7 @@ class Diffusion():
         """
         super().__init__()
         self.num_steps = num_steps
+        # For continuous noise
         # Beta scheduler
         self.betas = make_beta_schedule(schedule='linear', n_timesteps=num_steps, start=1e-5, end=0.5e-2)
         # Alphas
@@ -36,6 +37,16 @@ class Diffusion():
         self.alphas_bar_sqrt = torch.sqrt(self.alphas_prod)
         # One minus the cumulative product of alphas
         self.one_minus_alphas_bar_sqrt = torch.sqrt(1 - self.alphas_prod)
+
+        # For categorical noise
+        # Log of alphas
+        self.log_alphas = np.log(self.alphas)
+        # One minus log of alphas
+        self.one_minus_log_alphas = log_1_min_a(self.log_alphas)
+        # Cumulative sum of log of alphas
+        self.log_cumprod_alpha = np.cumsum(self.log_alphas)
+        # One minus log of cumulative sum
+        self.log_1_min_cumprod_alpha = log_1_min_a(self.log_cumprod_alpha)
 
 def get_denoising_variables(num_steps):
     """Calculates the variables used in the denoising process and captures them in the class 'Diffusion"
