@@ -21,13 +21,47 @@ from gan import *
 hdr_plot_style()
 
 # load the datasets
-train_x, train_y = load_data('../../dataset/UCI_HAR_Dataset', 'train')
-test_x, test_y = load_data('../../dataset/UCI_HAR_Dataset', 'test')
+train_x, train_y = load_data('../dataset/UCI_HAR_Dataset', 'train')
+test_x, test_y = load_data('../dataset/UCI_HAR_Dataset', 'test')
 
 classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
 labels = train_y
 dataset = train_x
+
+# Testing Pre-Trained Diffusion Pipeline on Gramian Angular Fields
+
+from pyts.image import GramianAngularField
+
+# Define dataset to generate images on (Must be 2D array?)
+task = train_x[0:1000]
+
+# Define GAF and fit to data
+gadf = GramianAngularField(image_size=48, method='difference')
+X_gadf = gadf.fit_transform(task)
+
+len_task = len(task)
+
+# Check that the directory to save the images exists or create it
+if not os.path.isdir('classification_images_gadf'):
+    os.makedirs('classification_images_gadf', exist_ok=True)
+
+# Iterate over the trajectories to create the images
+for i in range(len_task):
+    print(f'\r{i}/{len_task} - {round(i/len_task*100, 2)}%', end='')
+    plt.imshow(X_gadf[i], extent=[0, 1, 0, 1], cmap = 'coolwarm', aspect = 'auto',vmax=abs(X_gadf[i]).max(), vmin=-abs(X_gadf[i]).max())
+    plt.savefig('classification_images_gadf/X_gadf_{}.jpg'.format(i), bbox_inches='tight')
+    plt.close("all")
+
+
+from diffusers import DiffusionPipeline
+
+# generator = DiffusionPipeline.from_pretrained("google/ddpm-celebahq-256")
+
+
+
+print("Didn't crash")
+exit()
 
 # Define the number of features from the dataset to use. Must be 561 or less
 NUM_FEATURES = 40
