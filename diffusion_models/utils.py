@@ -180,16 +180,17 @@ def get_classes(data):
     """Finds all the classes in the data"""
     return data.unique(return_counts=True)[0]
 
-def get_model_output(model, input_size, diffusion, num_steps, num_to_gen):
+def get_model_output(model, input_size, diffusion, num_to_gen):
     """Gets the output of the model
     
     Args:
         model (ConditionalModel): the model to be used
-        num_steps (int): the number of noise steps
-        dataset (torch.Tensor): the real data to model after
+        input_size (int): the number of dimensions of the dataset
+        diffusion (Diffusion): the class holding the denoising variables
+        num_to_gen (int): number of samples to generate
     """
     with torch.no_grad():
-        x_seq = p_sample_loop(model, torch.Size([num_to_gen, input_size]), num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
+        x_seq = p_sample_loop(model, torch.Size([num_to_gen, input_size]), diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
     output = x_seq[-1]
 
     return output

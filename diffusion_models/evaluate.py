@@ -9,6 +9,7 @@ import joblib
 import seaborn as sns
 
 from sklearn.decomposition import PCA
+from scipy.special import rel_entr
 from utils import *
 import csv
 
@@ -58,9 +59,6 @@ def perform_pca(real, fake, title=None):
     # fake_data_df = pd.DataFrame(data=fake_components, columns=['PC1', 'PC2'])
     fake_df = pca_df.tail(len(fake))
 
-
-
-
     fig = plt.figure(figsize=(12, 10))
 
     # Make top margin smaller on figure and add some padding between graphs
@@ -104,8 +102,6 @@ def perform_pca(real, fake, title=None):
     ax.set_title(f'Heatmap for fake {title} data', fontsize=TITLE_FONT_SIZE)
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-
-    
 
 
 def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, overlay_heatmap=True):
@@ -250,6 +246,21 @@ def make_histograms(data, num_features):
         plt.ylabel('Frequency')
         plt.show()
         # plt.savefig(f'./histograms/fake/{col}.png')
+
+def calculate_kl(real, model, diffusion, num_to_gen):
+    """Calculates the kl divergence between fake data and the real data
+    
+    Args:
+        real (torch.Tensor): the real data
+        model (ConditionalModel): the diffusion model
+        diffusion (Diffusion): the class holding denoising variables
+        
+    Returns:
+        kl_divergence (float)
+    """
+    fake = get_model_output(model, real.shape[1], diffusion, num_to_gen)
+
+    return sum(rel_entr(fake, real))
 
 def score(labels, pred):
     """Calculates accuracy, recall, precision, and f1 based on true labels and predicted labels
@@ -399,7 +410,7 @@ def test_multiclass_classifier(model, data, labels):
     pred = model.predict(data)
     print(classification_report(labels, pred, digits=3))
 
-def separability(real, fake, train_test_ratio):
+def separability(real, fake, train_test_ratio, printStats=True):
     """Determines how separable real and fake data are from each other with a binary classifier
 
     Will print the output to the terminal
@@ -409,23 +420,46 @@ def separability(real, fake, train_test_ratio):
         fake (torch.Tensor): the fake data
 
     Returns:
-        None
+        accuracy (float)
+        precision (float)
+        recall (float)
+        f1-score (float)
     """
     labels = torch.cat([torch.zeros(real.shape[0]), torch.ones(fake.shape[0])])
     data = torch.cat([real, fake])
-    train_x, test_x, train_y, test_y = train_test_split(data.detach().numpy(), labels.detach().numpy(), test_size=train_test_ratio)
 
-    model = RandomForestClassifier(max_depth=10)
-    model.fit(train_x, train_y)
+    accuracies, precisions, recalls, f1s = 0.0, 0.0, 0.0, 0.0
+    num_fits = 3
 
-    pred = model.predict(test_x)
-    accuracy, precision, recall, f1 = score(test_y, pred)
-    print(f'Accuracy:\t{accuracy}')
-    print(f'Precision:\t{precision}')
-    print(f'Recall:\t{recall}')
-    print(f'F1:\t\t{f1}')
+    # Fit three models and take average
+    for i in range(num_fits):
+        train_x, test_x, train_y, test_y = train_test_split(data.detach().numpy(), labels.detach().numpy(), test_size=train_test_ratio)
 
-    return model
+        model = RandomForestClassifier(max_depth=10)
+        model.fit(train_x, train_y)
+
+        # Make prediction, evaluate, and add to totals
+        pred = model.predict(test_x)
+        accuracy, precision, recall, f1 = score(test_y, pred)
+        accuracies += accuracy
+        precisions += precision
+        recalls += recall
+        f1s += f1
+
+    # Average results
+    accuracy = accuracies/num_fits
+    precision = precisions/num_fits
+    recall = recalls/num_fits
+    f1 = f1s/num_fits
+
+    if printStats:
+        print('\nSeparability:')
+        print(f'Accuracy:\t{accuracy}')
+        print(f'Precision:\t{precision}')
+        print(f'Recall:\t{recall}')
+        print(f'F1:\t\t{f1}')
+
+    return accuracy, precision, recall, f1
 
 def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_train_ratio, num_steps):
     """Evaluates data on binary classifiers and saves to csv

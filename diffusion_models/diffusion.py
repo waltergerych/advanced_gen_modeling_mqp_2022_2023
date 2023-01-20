@@ -161,7 +161,7 @@ def forward_diffusion(dataset, num_steps, plot=False, num_divs=10):
 
     return diffusion
 
-def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False):
+def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
     """Applies reverse diffusion to a dataset
 
     Args:
@@ -171,9 +171,10 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
         training_time_steps (int): number of training steps to remove noise.  Default is step_size from diffusion class
         plot (bool): true if you want to plot the data showing the removal of the noise
         num_divs (int): number of plots to show. Default is 10 and only applicable if plot=True
+        model (ConditionalModel): optional argument to train a previously defined model
 
     Returns:
-        model (torch.Tensor.state.dict): the trained model
+        model (ConditionalModel): the trained model
     """
     # Load variables from diffusion class
     num_steps = diffusion.num_steps
@@ -186,15 +187,20 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
     if training_time_steps == 0:
         training_time_steps = num_steps
 
-    model = ConditionalModel(num_steps, dataset.size()[1])
+    # If no model given, create new one
+    if model == None:
+        model = ConditionalModel(num_steps, dataset.size()[1])
+
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     # Create EMA model
     ema = EMA(0.9)
     ema.register(model)
 
     batch_size = 128
-    for t in range(training_time_steps):
-        # X is a torch Variable
+    # Define training loop until f1 score for separability between real and fake goes below threshold
+    f1, t = 1.0, 0
+    while f1 > .6 and t < 10000:            # New loop for threshold or max t
+    # for t in range(training_time_steps):  # Previous loop for x amount of backwards steps
         permutation = torch.randperm(dataset.size()[0])
         for i in range(0, dataset.size()[0], batch_size):
             # Retrieve current batch
@@ -213,13 +219,11 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
             # Update the exponential moving average
             ema.update(model)
         # Print loss
-        if (t % int(training_time_steps/(num_divs*2)) == 0):
-            # Print every 5% update
-            print(f'{int((t/training_time_steps)*100) if t != 0 else 0}% done \t loss: {loss}')
-            # Draw plots every num_divs steps (default 10)
-            if plot and t % (training_time_steps/num_divs) == 0:
-                visualize_backward(model, dataset, num_steps, num_divs, diffusion, heatmap=show_heatmap)
-                # visualize_heatmap(model, dataset, num_steps, num_divs, diffusion)
+        if t % 1000 == 0:
+            fake = get_model_output(model, dataset.shape[1], diffusion, num_to_gen=1000)
+            _, _, _, f1 = separability(dataset, fake, train_test_ratio=.7, printStats=False)
+        print(f'Training Steps: {t}\tLoss: {round(loss.item(), 4)}\tF1: {round(f1, 4)}\r', end='')
+        t += 1
     if plot:
         plt.show()
 
