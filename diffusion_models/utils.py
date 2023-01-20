@@ -150,13 +150,14 @@ def log_add_exp(a, b):
     maximum = torch.max(a, b)
     return maximum + torch.log(torch.exp(a - maximum) + torch.exp(b - maximum))
 
-def q_x_cat(data, t, diffs):
+def q_x_cat(data, t, diffs, temp):
     """Adds noise to categorical data
 
     Args:
         data (torch.Tensor): the categorical data
         t (torch.Tensor): the number of time steps of noise to add
         diffs (Diffusion): the class encapsulating the diffusion variables
+        temp (int): temperature variable to control amount of noise added (~0.0-1.0)
     """
     # Get all categorical classes and the size of the data
     classes = get_classes(data)
@@ -165,6 +166,7 @@ def q_x_cat(data, t, diffs):
 
     # Get probability distribution, add noise, and sample from distribution again
     probs = get_probs(data, classes)
+    probs = normalize(probs + temp)      # Might be cheating --> Not sure if able to denoise
     log_cumprod_alpha_t = extract_cat(diffs.log_cumprod_alpha, t, probs.shape)
     log_1_min_cumprod_alpha = extract_cat(diffs.log_1_min_cumprod_alpha, t, probs.shape)
     log_probs = log_add_exp(probs + log_cumprod_alpha_t, log_1_min_cumprod_alpha - np.log(K))
@@ -179,6 +181,11 @@ def get_probs(data, K):
 def get_classes(data):
     """Finds all the classes in the data"""
     return data.unique(return_counts=True)[0]
+
+def normalize(probs):
+    """Normalizes distribution to add up to one"""
+    sum = torch.sum(probs)
+    return probs / sum
 
 def get_model_output(model, input_size, diffusion, num_to_gen):
     """Gets the output of the model

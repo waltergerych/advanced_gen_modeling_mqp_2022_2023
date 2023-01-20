@@ -80,25 +80,6 @@ def q_x(x_0, t, model, noise=None):
     alphas_1_m_t = extract(model.one_minus_alphas_bar_sqrt, t, x_0)
     return (alphas_t * x_0 + alphas_1_m_t * noise)
 
-def q_x_cat(x_0, t, model, K):
-    """Function to add t time steps of noise to categorical data x
-    
-    Args:
-        x_0 (torch.Tensor): Categorical data to add noise to
-        t (torch.Tensor): the number of time steps to add
-        model (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
-                                Constants calculated from num_steps input to class constructor
-        K (torch.Tensor): Tensor of size 1 representing the number of classes the categorical variable x can take
-
-    Returns:
-        (torch.Tensor): the data with the noise added to it
-    """
-    alphas_t = extract(model.alphas_bar_sqrt, t, x_0)
-    alphas_1_m_t = extract(model.one_minus_alphas_bar_sqrt, t, x_0)
-    cat = (alphas_t * x_0 + alphas_1_m_t) / K
-    print(cat)
-    return cat
-
 def visualize_forward(dataset, num_steps, num_divs, diffusion):
     """Vizualizes the forward diffusion process
     
