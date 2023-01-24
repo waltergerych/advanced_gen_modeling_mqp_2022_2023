@@ -150,28 +150,9 @@ def log_add_exp(a, b):
     maximum = torch.max(a, b)
     return maximum + torch.log(torch.exp(a - maximum) + torch.exp(b - maximum))
 
-def q_x_cat(data, t, diffs, temp):
-    """Adds noise to categorical data
-
-    Args:
-        data (torch.Tensor): the categorical data
-        t (torch.Tensor): the number of time steps of noise to add
-        diffs (Diffusion): the class encapsulating the diffusion variables
-        temp (int): temperature variable to control amount of noise added (~0.0-1.0)
-    """
-    # Get all categorical classes and the size of the data
-    classes = get_classes(data)
-    K = classes.shape[0]
-    size = data.shape[0]
-
-    # Get probability distribution, add noise, and sample from distribution again
-    probs = get_probs(data, classes)
-    probs = normalize(probs + temp)      # Might be cheating --> Not sure if able to denoise
-    log_cumprod_alpha_t = extract_cat(diffs.log_cumprod_alpha, t, probs.shape)
-    log_1_min_cumprod_alpha = extract_cat(diffs.log_1_min_cumprod_alpha, t, probs.shape)
-    log_probs = log_add_exp(probs + log_cumprod_alpha_t, log_1_min_cumprod_alpha - np.log(K))
-    data = torch.stack(choices(classes, weights=log_probs, k=size))
-    return data
+def resample(distribution, n):
+    """Resamples from a distribution n times"""
+    return torch.multinomial(distribution, n, replacement=True)
 
 def get_probs(data, K):
     """Calculate probablity distribution for given data with K classes"""

@@ -63,7 +63,7 @@ def get_denoising_variables(num_steps):
 
 # Add t time steps of noise to the data x
 def q_x(x_0, t, model, noise=None):
-    """Function to add t time steps of noise to data x
+    """Function to add t time steps of noise to continuous data x
     
     Args:
         x_0 (torch.Tensor): the data to add noise to
@@ -79,6 +79,26 @@ def q_x(x_0, t, model, noise=None):
     alphas_t = extract(model.alphas_bar_sqrt, t, x_0)
     alphas_1_m_t = extract(model.one_minus_alphas_bar_sqrt, t, x_0)
     return (alphas_t * x_0 + alphas_1_m_t * noise)
+
+def q_x_cat(data, diffs, t):
+    """Function to add t time steps of noise to discrete data x
+    
+    Args:
+        data (torch.Tensor): the discrete data to add noise to
+        model (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
+                                Constants calculated from num_steps input to class constructor
+        t (torch.Tensor): the number of noise steps to add
+
+    Returns:
+        (torch.Tensor): the data with the noise added to it
+    """
+    classes = get_classes(data)
+    probs = get_probs(data, classes)
+    k = classes.shape[0]
+    cumprod_alpha = extract_cat(diffs.alphas_prod, t, probs.shape)
+    cumprod_1_minus_alpha = extract_cat(diffs.one_minus_alphas_bar_sqrt, t, probs.shape)
+    new_probs = cumprod_alpha*probs + cumprod_1_minus_alpha / k
+    return resample(new_probs, data.shape[0])
 
 def visualize_forward(dataset, num_steps, num_divs, diffusion):
     """Vizualizes the forward diffusion process
