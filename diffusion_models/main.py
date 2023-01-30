@@ -20,21 +20,39 @@ from gan import *
 # Set plot style
 hdr_plot_style()
 
+# New dataset for GAFs: https://archive.ics.uci.edu/ml/datasets/human+activity+recognition+using+smartphones#
+# Contains triaxial information for acceleration and gyroscope data
+# Shape: [number_of_datapoints, some_number_of_timesteps]
+# This means each row of each of these CSVs will be a timeseries of some number of timesteps.
+
 # load the datasets
 train_x, train_y = load_data('../dataset/UCI_HAR_Dataset', 'train')
 test_x, test_y = load_data('../dataset/UCI_HAR_Dataset', 'test')
+
+# GAF data
+# Option 1: Choose one axis out of the three for each measurement type
+# Option 2: Make a GAF for each axis and stack them on top of each other to form an RGB image
+# Going with option 1 first to make sure this works properly
+# from glob import glob
+# for f in glob("../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/*/", recursive=True):
+    # print(f)
+# print(os.path.exists('../dataset/UCI_HAR_Dataset_Triaxial/train/Intertial_Signals'))
+total_acc_x_train = np.loadtxt('../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/total_acc_x_train.txt')
+body_gyro_x_train = np.loadtxt('../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/body_gyro_x_train.txt')
+
 
 classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
 labels = train_y
 dataset = train_x
 
-# Testing Pre-Trained Diffusion Pipeline on Gramian Angular Fields
+# Testing Diffusion Pipeline on Gramian Angular Fields
 
 from pyts.image import GramianAngularField
 
-# Define dataset to generate images on (Must be 2D array?)
-task = train_x[0:1000]
+# Define dataset to generate images on (Must be 2D array)
+# Using only x axis of total acceleration to test
+task = total_acc_x_train[0:1000]
 
 # Define GAF and fit to data
 gadf = GramianAngularField(image_size=48, method='difference')
@@ -43,20 +61,83 @@ X_gadf = gadf.fit_transform(task)
 len_task = len(task)
 
 # Check that the directory to save the images exists or create it
-if not os.path.isdir('classification_images_gadf'):
-    os.makedirs('classification_images_gadf', exist_ok=True)
+GAF_DIRECTORY = 'GAF_Testing_Images'
+if not os.path.isdir(GAF_DIRECTORY):
+    os.makedirs(GAF_DIRECTORY, exist_ok=True)
 
 # Iterate over the trajectories to create the images
 for i in range(len_task):
     print(f'\r{i}/{len_task} - {round(i/len_task*100, 2)}%', end='')
     plt.imshow(X_gadf[i], extent=[0, 1, 0, 1], cmap = 'coolwarm', aspect = 'auto',vmax=abs(X_gadf[i]).max(), vmin=-abs(X_gadf[i]).max())
-    plt.savefig('classification_images_gadf/X_gadf_{}.jpg'.format(i), bbox_inches='tight')
+    plt.savefig(f'{GAF_DIRECTORY}/total_acc_x_gaf_{i}.jpg', bbox_inches='tight')
     plt.close("all")
 
 
 from diffusers import DiffusionPipeline
 
-# generator = DiffusionPipeline.from_pretrained("google/ddpm-celebahq-256")
+# Unconditional diffusion model
+pipeline = DiffusionPipeline.from_pretrained("google/ddpm-celebahq-256")
+
+# test_img = pipeline(
+#     train_data_dir="classification_images_gadf",
+#     dataset_name="classification_images_gadf",
+#     resolution=64,
+#     output_dor="testing_diffusion_output",
+#     train_batch_size=16,
+#     num_epochs=100,
+#     gradient_accumulation_steps=1,
+#     learning_rate=1e-4,
+#     lr_warmup_steps=500,
+#     mixed_precision="no",
+#     ).images[0]
+
+# main.py \
+#   --train_data_dir "classification_images_gadf" \
+#   --dataset_name="classification_images_gadf" \
+#   --resolution=64 \
+#   --output_dir="ddpm-ema-flowers-64" \
+#   --train_batch_size=16 \
+#   --num_epochs=100 \
+#   --gradient_accumulation_steps=1 \
+#   --learning_rate=1e-4 \
+#   --lr_warmup_steps=500 \
+#   --mixed_precision=no \
+
+
+#   --push_to_hub
+
+
+
+
+# from diffusers import StableDiffusionImg2ImgPipeline
+# import requests
+# from PIL import Image
+# from io import BytesIO
+
+# # load the pipeline
+# pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
+#     "CompVis/stable-diffusion-v1-4", revision="fp16", torch_dtype=torch.float16
+# )
+
+# # let's download an initial image
+# url = "https://raw.githubusercontent.com/CompVis/stable-diffusion/main/assets/stable-samples/img2img/sketch-mountains-input.jpg"
+
+# response = requests.get(url)
+# init_image = Image.open(BytesIO(response.content)).convert("RGB")
+# init_image = init_image.resize((768, 512))
+
+# prompt = "A fantasy landscape, trending on artstation"
+
+# images = pipe(prompt=prompt, init_image=init_image, strength=0.75, guidance_scale=7.5).images
+
+# images[0].save("fantasy_landscape.png")
+
+
+
+# How to convert GAFs back to time series data?
+# https://stackoverflow.com/questions/13203017/converting-images-to-time-series
+
+
 
 
 
