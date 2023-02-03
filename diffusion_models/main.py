@@ -61,10 +61,14 @@ for i in range(len(classes)):
     print("Starting training for class " + str(classes[i]))
 
     try:
+        model = ConditionalModel(NUM_STEPS, dataset.size(1))
         model.load_state_dict(torch.load(f'./models/{NUM_STEPS}_step_model_best40_{i}.pth'))
-        model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False, model=model)
+        # model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False, model=model)
+        model = reverse_tabular_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False, model=model)
     except:
-        model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False)
+        model = ConditionalModel(NUM_STEPS, dataset.size(1))
+        model = reverse_tabular_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False, model=model)
+        # model = reverse_diffusion(dataset, diffusion, NUM_REVERSE_STEPS, plot=False)
     models.append(model)
     diffusions.append(diffusion)
 
