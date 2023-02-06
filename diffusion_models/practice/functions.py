@@ -39,9 +39,9 @@ class ConditionalLinear(nn.Module):
         return out
         
 class ConditionalModel(nn.Module):
-    def __init__(self, some_int, input_size):
+    def __init__(self, some_int, input_size): # is some_int being used as num_embeddings? if so, why is it called some_int??
         super(ConditionalModel, self).__init__()
-        self.lin1 = ConditionalLinear(input_size, 128, some_int)
+        self.lin1 = ConditionalLinear(input_size, 128, some_int) # why is this 128? if num_out = 128, doesn't that mean input_size 
         self.lin2 = ConditionalLinear(128, 128, some_int)
         self.lin3 = ConditionalLinear(128, 128, some_int)
         self.lin4 = nn.Linear(128, input_size)

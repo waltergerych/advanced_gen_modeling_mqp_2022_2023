@@ -20,7 +20,7 @@ from gan import *
 # Set plot style
 hdr_plot_style()
 
-# load the datasets
+# Load the datasets
 train_x, train_y = load_data('../../dataset/UCI_HAR_Dataset', 'train')
 test_x, test_y = load_data('../../dataset/UCI_HAR_Dataset', 'test')
 
