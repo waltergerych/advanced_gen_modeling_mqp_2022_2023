@@ -8,6 +8,8 @@ import numpy as np
 import torch
 import pandas as pd
 from random import choices
+import torch.nn.functional as F
+from torch.distributions import Categorical
 
 def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2):
     if schedule == 'linear':
@@ -141,6 +143,64 @@ def noise_estimation_loss(model, x_0,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,n
     output = model(x, t)
     return (e - output).square().mean()
 
+def q_x_cat(data, diffs, t, k=2):
+    """Function to add t time steps of noise to discrete data x
+    
+    Args:
+        data (torch.Tensor): the discrete data to add noise to
+        model (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
+                                Constants calculated from num_steps input to class constructor
+        t (torch.Tensor): the number of noise steps to add
+
+    Returns:
+        (torch.Tensor): the data with the noise added to it
+    """
+    probs = get_probs(data, k)
+    probs = probs.repeat(t.shape[0], 1, 1)
+    cumprod_alpha = extract_cat(diffs.alphas_prod, t, probs.shape)
+    cumprod_1_minus_alpha = extract_cat(diffs.one_minus_alphas_bar_sqrt, t, probs.shape)
+    new_probs = cumprod_alpha*probs + cumprod_1_minus_alpha / k
+    return resample(new_probs, data.shape[0])
+
+def multinomial_diffusion_noise_estimation(model, x_0, diffs):
+    """Calculates the loss in estimating the noise of x_t
+
+    Args:
+        model (ConditionalTabularModel): the model
+        x_0 (torch.Tensor): the original categorical data at t=0
+        diffs (Diffusion): the class encapsulating the diffusion variables
+    """
+    n_steps = diffs.num_steps
+    batch_size = x_0.shape[0]
+
+    # Select a random step for each example
+    t = torch.randint(0, n_steps, size=(batch_size // 2 + 1,))
+    t = torch.cat([t, n_steps - t - 1], dim=0)[:batch_size].long()
+
+    # Get t-1 and ensure values are not negative
+    t_1 = t - 1
+    t_1[t_1 == -1] = 0
+
+    # Get x_t for each time step in batch
+    batch_x_t = q_x_cat(x_0, diffs, t)
+
+    # Extract values for loss
+    alpha = extract(diffs.alphas, t, x_0)
+    one_minus_alpha = 1 - alpha
+    k = x_0.shape[1]
+    alphas_prod = extract(diffs.alphas_prod, t_1, x_0)
+    one_minus_alpha_prod = 1 - alphas_prod
+
+    # Get random noise
+    e = torch.randn_like(x_0)
+    
+    # Calculate theta and get model output
+    theta = (alpha * batch_x_t + one_minus_alpha / k) * (alphas_prod * x_0 + one_minus_alpha_prod / k)
+    theta = theta / torch.sum(theta)
+    output = model(theta.float(), t)
+
+    return (e - output).square().mean()
+
 def extract_cat(a, t, x_shape):
     b, *_ = t.shape
     out = a.gather(-1, t)
@@ -150,46 +210,57 @@ def log_add_exp(a, b):
     maximum = torch.max(a, b)
     return maximum + torch.log(torch.exp(a - maximum) + torch.exp(b - maximum))
 
-def q_x_cat(data, t, diffs):
-    """Adds noise to categorical data
+def resample(distribution, n):
+    """Resamples from a distribution n times"""
+    log_probs = F.log_softmax(distribution, dim=-1)
+    num_feat = distribution.shape[0]
 
-    Args:
-        data (torch.Tensor): the categorical data
-        t (torch.Tensor): the number of time steps of noise to add
-        diffs (Diffusion): the class encapsulating the diffusion variables
-    """
-    # Get all categorical classes and the size of the data
-    classes = get_classes(data)
-    K = classes.shape[0]
-    size = data.shape[0]
+    # Create a categorical distribution for each sample in the batch
+    categories = [Categorical(logits=log_probs[i]) for i in range(log_probs.shape[0])]
 
-    # Get probability distribution, add noise, and sample from distribution again
-    probs = get_probs(data, classes)
-    log_cumprod_alpha_t = extract_cat(diffs.log_cumprod_alpha, t, probs.shape)
-    log_1_min_cumprod_alpha = extract_cat(diffs.log_1_min_cumprod_alpha, t, probs.shape)
-    log_probs = log_add_exp(probs + log_cumprod_alpha_t, log_1_min_cumprod_alpha - np.log(K))
-    data = torch.stack(choices(classes, weights=log_probs, k=size))
-    return data
+    # Sample from each categorical distribution
+    samples = [c.sample(torch.Size([n])) for c in categories]
+
+    # Convert the samples to a tensor
+    samples_tensor = torch.stack(samples)
+    return samples_tensor
 
 def get_probs(data, K):
-    """Calculate probablity distribution for given data with K classes"""
-    totals = data.squeeze().bincount(minlength=K)
-    return totals / torch.sum(totals)
+    """Calculate probablity distribution for given data with K classes
+    
+    Args:
+        data (torch.Tensor): a 2D tensor of data
+        k (int): number of classes
+
+    Returns:
+        (torch.Tensor): a 2D tensor of probabilities
+    """
+    indices = data.long()
+    one_hot = torch.nn.functional.one_hot(indices, K)
+    sums = one_hot.sum(dim=0)
+    totals = sums.sum(dim=1).unsqueeze(dim=-1)
+    return sums / totals
 
 def get_classes(data):
     """Finds all the classes in the data"""
     return data.unique(return_counts=True)[0]
 
-def get_model_output(model, input_size, diffusion, num_steps, num_to_gen):
+def normalize(probs):
+    """Normalizes distribution to add up to one"""
+    sum = torch.sum(probs)
+    return probs / sum
+
+def get_model_output(model, input_size, diffusion, num_to_gen):
     """Gets the output of the model
     
     Args:
         model (ConditionalModel): the model to be used
-        num_steps (int): the number of noise steps
-        dataset (torch.Tensor): the real data to model after
+        input_size (int): the number of dimensions of the dataset
+        diffusion (Diffusion): the class holding the denoising variables
+        num_to_gen (int): number of samples to generate
     """
     with torch.no_grad():
-        x_seq = p_sample_loop(model, torch.Size([num_to_gen, input_size]), num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
+        x_seq = p_sample_loop(model, torch.Size([num_to_gen, input_size]), diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
     output = x_seq[-1]
 
     return output
@@ -266,7 +337,43 @@ def read_user_data(uid):
         feature_names (pandas.DataFrame): the data for all of the features
         labels (pandas.DataFrame): the data for all of the labels
     """
-    df = pd.read_csv(f'./../../dataset/ExtraSensory/{uid}.features_labels.csv/{uid}.features_labels.csv')
+    df = pd.read_csv(f'./../dataset/ExtraSensory/{uid}.features_labels.csv/{uid}.features_labels.csv')
     feature_names = df.iloc[:, 0:226]
     labels = df.iloc[:, 226:]
     return df, feature_names, labels
+
+def separate_tabular_data(data, features):
+    """Retrieves the discrete and continuous features from a dataset
+    
+    Args:
+        data (torch.Tensor): the data to split
+        features (list<strings>): a list of the feature names of the columns for the data
+
+    Returns:
+        continuous (torch.Tensor): the continuous data
+        discrete (torch.Tensor): the discrete data
+    """
+    continuous_indices = []
+    discrete_indices = []
+    for i, name in enumerate(features):
+        if name.__contains__('discrete'):
+            discrete_indices.append(i)
+        else:
+            continuous_indices.append(i)
+    
+    discrete = torch.index_select(data, 1, torch.tensor(discrete_indices))
+    continuous = torch.index_select(data, 1, torch.tensor(continuous_indices))
+
+    return continuous, discrete
+
+def get_condition(discrete):
+    """Gets a random categorical variable and samples from that distribution
+    
+    Args:
+        discrete (torch.Tensor): the discrete features
+        
+    Returns:
+        condition (int): a one-hot encoded condition of a random categorical variable
+    """
+    # Function needed for tabular diffusion training model
+    
