@@ -20,17 +20,26 @@ data = torch.tensor(df.values)
 
 # Variables for diffusion
 NUM_STEPS = 100         # Low for testing to speed up
-NUM_REVERSE_STEPS = 200
+NUM_REVERSE_STEPS = 1000
 diffusion = get_denoising_variables(NUM_STEPS)
 
 # Separate the continuous and discrete data
 continuous, discrete = separate_tabular_data(data, features)
 
+# Select one feature, just for initial testing
+discrete = discrete[:, 33].unsqueeze(-1)
+
+# New testing data rather than real data --> Trying to get this working first
+weights = torch.tensor([.8, .2])
+num_samples = 1000
+discrete = torch.multinomial(weights, num_samples, replacement=True)
+k = get_classes(discrete).shape[0]
+discrete = discrete.unsqueeze(-1)
+
 # Declare model
-model = ConditionalMultinomialModel(NUM_STEPS, discrete.size(1))
-model, loss = reverse_tabular_diffusion(data, features, diffusion, NUM_REVERSE_STEPS, plot=False, model=model)
+model = ConditionalMultinomialModel(NUM_STEPS, k)   # Need to declare as number of classes for feature. Multiple features????
+model, loss = reverse_tabular_diffusion(discrete, features, diffusion, NUM_REVERSE_STEPS, plot=False, model=model)
 torch.save(model.state_dict(), f'./models/discrete_{NUM_STEPS}.pth')
-print(loss)
 
 x = range(NUM_REVERSE_STEPS)
 plt.plot(x, loss)
@@ -39,18 +48,19 @@ plt.show()
 """
 NOTES:
     Currently working on just discrete diffusion with ConditionalMultinomialModel.
-    Testing using ExtraSensory dataset and extracting only discrete features
     
-    Goal: get reverse diffusion to work with discrete data
-    Includes: loss function, working model architecture, training loop, 
-             and any sort of evaluation for it (plotting discrete distributions?)
-             to show that the original data is recovered
+    Next Steps:
+        - Get model to learn/work with test data with one feature
+        - Get model to learn/work with test data with multiple features (concat feature one-hots)
+        - Then get model to learn with real ExtraSensory dataset
+
 
     Multinomial Diffusion: https://arxiv.org/pdf/2102.05379.pdf (Section 4)
 
-    Current State: Loss function may not be working? Loss does not seem to go down
-            and model does not seem to be learning.  Loss graphed for latest training 
-            with only 200 steps saved in /training_loss folder
+    Current State: Training loss is not decreasing.  Potentially fixes/issues
+        - Any hyperparameters (batch_size, training steps (epochs))
+        - Incorrect loss function (pretty sure its right)
+        - Incorrect model architecture
 """
 
 """

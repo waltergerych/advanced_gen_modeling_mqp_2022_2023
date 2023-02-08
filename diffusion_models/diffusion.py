@@ -249,7 +249,8 @@ def reverse_tabular_diffusion(dataset, features, diffusion, training_time_steps=
         model (ConditionalModel): the trained model
     """
     # Split data into continuous and discrete
-    continuous, discrete = separate_tabular_data(dataset, features)
+    # continuous, discrete = separate_tabular_data(dataset, features)
+    discrete = dataset
 
     # Load variables from diffusion class
     num_steps = diffusion.num_steps
@@ -282,8 +283,10 @@ def reverse_tabular_diffusion(dataset, features, diffusion, training_time_steps=
             # Retrieve current batch
             indices_discrete = permutation_discrete[i:i+batch_size]
             batch_x_discrete = discrete[indices_discrete]
+            k = get_classes(batch_x_discrete).shape[0]       # Will need to change with multiple features
+            # One hot encoding
+            batch_x_discrete = torch.nn.functional.one_hot(batch_x_discrete.long(), k)
             # Compute the loss
-            # loss = noise_estimation_loss(model, batch_x,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,num_steps)
             loss = multinomial_diffusion_noise_estimation(model, batch_x_discrete, diffusion)
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()

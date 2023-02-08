@@ -143,24 +143,26 @@ def noise_estimation_loss(model, x_0,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,n
     output = model(x, t)
     return (e - output).square().mean()
 
-def q_x_cat(data, diffs, t, k=2):
+def q_x_cat(x_0, diffs, t, k):
     """Function to add t time steps of noise to discrete data x
     
     Args:
-        data (torch.Tensor): the discrete data to add noise to
-        model (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
+        x_0 (torch.Tensor): the discrete data to add noise to
+        diffs (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
                                 Constants calculated from num_steps input to class constructor
         t (torch.Tensor): the number of noise steps to add
+        k (int): the number of classes for the feature
 
     Returns:
         (torch.Tensor): the data with the noise added to it
     """
-    probs = get_probs(data, k)
+    probs = get_probs(x_0, k)       # with one feature --> (t.size, n, k) (n = num features, k = num classes)
     probs = probs.repeat(t.shape[0], 1, 1)
     cumprod_alpha = extract_cat(diffs.alphas_prod, t, probs.shape)
     cumprod_1_minus_alpha = extract_cat(diffs.one_minus_alphas_bar_sqrt, t, probs.shape)
-    new_probs = cumprod_alpha*probs + cumprod_1_minus_alpha / k
-    return resample(new_probs, data.shape[0])
+    x_t_probs = cumprod_alpha*probs + cumprod_1_minus_alpha / k
+    x_t = resample(x_t_probs)
+    return to_one_hot(x_t, k)
 
 def multinomial_diffusion_noise_estimation(model, x_0, diffs):
     """Calculates the loss in estimating the noise of x_t
@@ -169,6 +171,13 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs):
         model (ConditionalTabularModel): the model
         x_0 (torch.Tensor): the original categorical data at t=0
         diffs (Diffusion): the class encapsulating the diffusion variables
+    """
+    """
+    NOTES:
+        x_0: (128, 1, 2)
+
+        Data should be (128, n*k_n), where n is number of features and k is number of classes in each feature
+
     """
     n_steps = diffs.num_steps
     batch_size = x_0.shape[0]
@@ -181,25 +190,32 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs):
     t_1 = t - 1
     t_1[t_1 == -1] = 0
 
+    # Get number of classes for feature
+    k = x_0.shape[2]        # will need to change with multiple features
+
     # Get x_t for each time step in batch
-    batch_x_t = q_x_cat(x_0, diffs, t)
+    batch_x_t = q_x_cat(x_0, diffs, t, k)
 
     # Extract values for loss
     alpha = extract(diffs.alphas, t, x_0)
     one_minus_alpha = 1 - alpha
-    k = x_0.shape[1]
     alphas_prod = extract(diffs.alphas_prod, t_1, x_0)
     one_minus_alpha_prod = 1 - alphas_prod
-
-    # Get random noise
-    e = torch.randn_like(x_0)
     
-    # Calculate theta and get model output
+    # Calculate theta (expected value)
     theta = (alpha * batch_x_t + one_minus_alpha / k) * (alphas_prod * x_0 + one_minus_alpha_prod / k)
-    theta = theta / torch.sum(theta)
-    output = model(theta.float(), t)
 
-    return (e - output).square().mean()
+    # Normalize across all time steps
+    theta = theta / torch.sum(theta)
+
+    # Get random noise for model
+    e = torch.randn_like(x_0.float())
+
+    # Get model output from noise and compare with theta
+    output = model(e, t)        # e (128, 1, 2), t (128)
+    theta = theta.squeeze(1)
+
+    return (theta - output).square().mean()
 
 def extract_cat(a, t, x_shape):
     b, *_ = t.shape
@@ -210,8 +226,10 @@ def log_add_exp(a, b):
     maximum = torch.max(a, b)
     return maximum + torch.log(torch.exp(a - maximum) + torch.exp(b - maximum))
 
-def resample(distribution, n):
-    """Resamples from a distribution n times"""
+def resample2(distribution, n):
+    """Resamples from a distribution n times
+    
+    Was being used, but in original fw diffusion used resample function below"""
     log_probs = F.log_softmax(distribution, dim=-1)
     num_feat = distribution.shape[0]
 
@@ -225,30 +243,48 @@ def resample(distribution, n):
     samples_tensor = torch.stack(samples)
     return samples_tensor
 
+def resample(distribution):
+    """Resamples from a probability distribution
+    
+    Args:
+        distribution (torch.Tensor): 3D tensor with third dimension with the probabilties
+    """
+    return torch.multinomial(distribution.squeeze(1), num_samples=1, replacement=True)
+
 def get_probs(data, K):
     """Calculate probablity distribution for given data with K classes
     
     Args:
-        data (torch.Tensor): a 2D tensor of data
-        k (int): number of classes
+        data (torch.Tensor): a 3D tensor of data with the third dimension being the one-hot encodings
+        K (int): number of classes
 
     Returns:
         (torch.Tensor): a 2D tensor of probabilities
     """
-    indices = data.long()
-    one_hot = torch.nn.functional.one_hot(indices, K)
-    sums = one_hot.sum(dim=0)
+    sums = data.sum(dim=0)
     totals = sums.sum(dim=1).unsqueeze(dim=-1)
-    return sums / totals
+    return (sums / totals)
 
 def get_classes(data):
-    """Finds all the classes in the data"""
+    """Finds all the classes in the data
+    
+    Returns:
+        (torch.Tensor): a tensor of all the classes
+
+    Ex: data = torch.tensor([0, 0, 1, 0, 2])
+        get_classes(data)
+        --> tensor([0, 1, 2])
+    """
     return data.unique(return_counts=True)[0]
 
 def normalize(probs):
     """Normalizes distribution to add up to one"""
     sum = torch.sum(probs)
     return probs / sum
+
+def to_one_hot(data, k):
+    """Makes one hot encoding of data with k classes"""
+    return torch.nn.functional.one_hot(data.long(), k)
 
 def get_model_output(model, input_size, diffusion, num_to_gen):
     """Gets the output of the model
