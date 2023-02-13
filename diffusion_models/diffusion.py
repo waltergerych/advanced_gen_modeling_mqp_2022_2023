@@ -232,7 +232,7 @@ def use_model(model, dataset, diffusion, t):
 ###  CODE TO WORK ON FOR ###
 ###   TABULAR DIFFUSION  ###
 ############################
-def reverse_tabular_diffusion(dataset, features, diffusion, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
+def reverse_tabular_diffusion(dataset, features, diffusion, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
     """Applies reverse diffusion to a dataset
 
     Args:
@@ -267,12 +267,10 @@ def reverse_tabular_diffusion(dataset, features, diffusion, training_time_steps=
     if model == None:
         model = ConditionalMultinomialModel(num_steps, discrete.shape[1])
 
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
     # Create EMA model
     ema = EMA(0.9)
     ema.register(model)
-
-    batch_size = 128
 
     # Only tracked for graphing loss afterwards
     loss_list = []
@@ -299,7 +297,7 @@ def reverse_tabular_diffusion(dataset, features, diffusion, training_time_steps=
             # Update the exponential moving average
             ema.update(model)
         # Print loss
-        print(f'Training Steps: {t}\tLoss: {round(loss.item(), 4)}\r', end='')
+        print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}', end='\n')
         loss_list.append(loss.item())
 
     return model, loss_list

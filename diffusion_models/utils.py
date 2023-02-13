@@ -156,10 +156,9 @@ def q_x_cat(x_0, diffs, t, k):
     Returns:
         (torch.Tensor): the data with the noise added to it
     """
-    probs = get_probs(x_0, k)       # with one feature --> (t.size, n, k) (n = num features, k = num classes)
-    probs = probs.repeat(t.shape[0], 1, 1)
-    cumprod_alpha = extract_cat(diffs.alphas_prod, t, probs.shape)
-    cumprod_1_minus_alpha = extract_cat(diffs.one_minus_alphas_bar_sqrt, t, probs.shape)
+    probs = get_probs(x_0)       # torch.Size([k])
+    cumprod_alpha = extract_cat(diffs.alphas_prod, t, x_0.shape)
+    cumprod_1_minus_alpha = extract_cat(diffs.one_minus_alphas_bar_sqrt, t, x_0.shape)
     x_t_probs = cumprod_alpha*probs + cumprod_1_minus_alpha / k
     x_t = resample(x_t_probs)
     return to_one_hot(x_t, k)
@@ -171,10 +170,9 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs):
         model (ConditionalTabularModel): the model
         x_0 (torch.Tensor): the original categorical data at t=0
         diffs (Diffusion): the class encapsulating the diffusion variables
-    """
-    """
+
     NOTES:
-        x_0: (128, 1, 2)
+        x_0: (batch_size, k) for one feature
 
         Data should be (128, n*k_n), where n is number of features and k is number of classes in each feature
 
@@ -191,7 +189,7 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs):
     t_1[t_1 == -1] = 0
 
     # Get number of classes for feature
-    k = x_0.shape[2]        # will need to change with multiple features
+    k = x_0.shape[1]        # will need to change with multiple features
 
     # Get x_t for each time step in batch
     batch_x_t = q_x_cat(x_0, diffs, t, k)
@@ -209,10 +207,11 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs):
     theta = theta / torch.sum(theta)
 
     # Get random noise for model
-    e = torch.randn_like(x_0.float())
+    e = torch.multinomial(torch.tensor([.5, .5]), x_0.shape[0], replacement=True)   # Will need to change with multiple classes
+    e = to_one_hot(e, 2).float()
 
     # Get model output from noise and compare with theta
-    output = model(e, t)        # e (128, 1, 2), t (128)
+    output = model(e, t)
     theta = theta.squeeze(1)
 
     return (theta - output).square().mean()
@@ -247,22 +246,22 @@ def resample(distribution):
     """Resamples from a probability distribution
     
     Args:
-        distribution (torch.Tensor): 3D tensor with third dimension with the probabilties
+        distribution (torch.Tensor): 2D tensor with second dimension with the probabilties
     """
-    return torch.multinomial(distribution.squeeze(1), num_samples=1, replacement=True)
+    return torch.multinomial(distribution, num_samples=1, replacement=True).squeeze(dim=1)
 
-def get_probs(data, K):
+def get_probs(data):
     """Calculate probablity distribution for given data with K classes
     
     Args:
-        data (torch.Tensor): a 3D tensor of data with the third dimension being the one-hot encodings
+        data (torch.Tensor): a 2D tensor of data with the second dimension being the one-hot encodings
         K (int): number of classes
 
     Returns:
         (torch.Tensor): a 2D tensor of probabilities
     """
     sums = data.sum(dim=0)
-    totals = sums.sum(dim=1).unsqueeze(dim=-1)
+    totals = sums.sum(dim=0).unsqueeze(dim=-1)
     return (sums / totals)
 
 def get_classes(data):

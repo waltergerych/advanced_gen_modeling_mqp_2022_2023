@@ -54,15 +54,14 @@ class ConditionalTabularModel(nn.Module):
 
 # Multinomial diffusion model
 class ConditionalMultinomialModel(nn.Module):
-    def __init__(self, n_steps, input_size):
+    def __init__(self, n_steps, hidden_size, input_size):
         super(ConditionalMultinomialModel, self).__init__()
-        self.lin1 = ConditionalLinear(input_size, 128, n_steps)
-        self.lin2 = ConditionalLinear(128, 128, n_steps)
-        self.lin3 = ConditionalLinear(128, 128, n_steps)
-        self.lin4 = nn.Linear(128, input_size)
+        self.lin1 = ConditionalLinear(input_size, hidden_size, n_steps)
+        self.lin2 = ConditionalLinear(hidden_size, hidden_size, n_steps)
+        self.lin3 = ConditionalLinear(hidden_size, hidden_size, n_steps)
+        self.lin4 = nn.Linear(hidden_size, input_size)
     
     def forward(self, x, y):
-        x = x.squeeze(1)
         x = F.softplus(self.lin1(x, y))
         x = F.softplus(self.lin2(x, y))
         x = F.softplus(self.lin3(x, y))
