@@ -39,6 +39,8 @@ test_x, test_y = load_data('../dataset/UCI_HAR_Dataset', 'test')
 # print(os.path.exists('../dataset/UCI_HAR_Dataset_Triaxial/train/Intertial_Signals'))
 total_acc_x_train = np.loadtxt('../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/total_acc_x_train.txt')
 body_gyro_x_train = np.loadtxt('../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/body_gyro_x_train.txt')
+CUSTOM_TYPE = "small_noise"
+custom_acc = np.loadtxt(f'../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/custom_acc_{CUSTOM_TYPE}.txt')
 
 
 classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
@@ -52,7 +54,8 @@ from pyts.image import GramianAngularField
 
 # Define dataset to generate images on (Must be 2D array)
 # Using only x axis of total acceleration to test
-task = total_acc_x_train[0:1000]
+# task = total_acc_x_train[0:1000]
+task = custom_acc
 
 # Define GAF and fit to data
 gadf = GramianAngularField(image_size=48, method='difference')
@@ -61,15 +64,16 @@ X_gadf = gadf.fit_transform(task)
 len_task = len(task)
 
 # Check that the directory to save the images exists or create it
-GAF_DIRECTORY = 'GAF_Testing_Images'
+GAF_DIRECTORY = 'GAF_Testing_Images_Custom'
 if not os.path.isdir(GAF_DIRECTORY):
     os.makedirs(GAF_DIRECTORY, exist_ok=True)
 
 # Iterate over the trajectories to create the images
 for i in range(len_task):
     print(f'\r{i}/{len_task} - {round(i/len_task*100, 2)}%', end='')
+    plt.axis('off')
     plt.imshow(X_gadf[i], extent=[0, 1, 0, 1], cmap = 'coolwarm', aspect = 'auto',vmax=abs(X_gadf[i]).max(), vmin=-abs(X_gadf[i]).max())
-    plt.savefig(f'{GAF_DIRECTORY}/total_acc_x_gaf_{i}.jpg', bbox_inches='tight')
+    plt.savefig(f'{GAF_DIRECTORY}/{CUSTOM_TYPE}_{i}.jpg', bbox_inches='tight')
     plt.close("all")
 
 
@@ -91,11 +95,11 @@ pipeline = DiffusionPipeline.from_pretrained("google/ddpm-celebahq-256")
 #     mixed_precision="no",
 #     ).images[0]
 
-# main.py \
-#   --train_data_dir "classification_images_gadf" \
-#   --dataset_name="classification_images_gadf" \
+# accelerate launch main.py \
+#   --train_data_dir "GAF_Testing_Images" \
+#   --dataset_name="GAF_Testing_Images" \
 #   --resolution=64 \
-#   --output_dir="ddpm-ema-flowers-64" \
+#   --output_dir="GAF_Output" \
 #   --train_batch_size=16 \
 #   --num_epochs=100 \
 #   --gradient_accumulation_steps=1 \
