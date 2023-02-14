@@ -190,6 +190,7 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs):
 
     # Get number of classes for feature
     k = x_0.shape[1]        # will need to change with multiple features
+    k = 2
 
     # Get x_t for each time step in batch
     batch_x_t = q_x_cat(x_0, diffs, t, k)
@@ -203,12 +204,13 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs):
     # Calculate theta (expected value)
     theta = (alpha * batch_x_t + one_minus_alpha / k) * (alphas_prod * x_0 + one_minus_alpha_prod / k)
 
-    # Normalize across all time steps
-    theta = theta / torch.sum(theta)
+    # Normalize each time step so it sums to one
+    theta = torch.nn.functional.normalize(theta, p=1, dim=1)
 
     # Get random noise for model
-    e = torch.multinomial(torch.tensor([.5, .5]), x_0.shape[0], replacement=True)   # Will need to change with multiple classes
-    e = to_one_hot(e, 2).float()
+    weights = torch.tensor([1/k]).repeat(k)
+    e = torch.multinomial(weights, x_0.shape[0], replacement=True)   # Will need to change with multiple classes
+    e = to_one_hot(e, k).float()
 
     # Get model output from noise and compare with theta
     output = model(e, t)
@@ -297,6 +299,18 @@ def get_model_output(model, input_size, diffusion, num_to_gen):
     with torch.no_grad():
         x_seq = p_sample_loop(model, torch.Size([num_to_gen, input_size]), diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
     output = x_seq[-1]
+
+    return output
+
+def get_discrete_model_output(model, k, diffusion, num_to_gen):
+    """Gets the output of a discrete model"""
+    t = torch.Tensor([0]).repeat(num_to_gen).int()
+    weights = torch.Tensor([1]) / k
+    weights = weights.repeat(k)
+    e = torch.multinomial(weights, num_to_gen, replacement=True)   # Will need to change with multiple classes
+    e = to_one_hot(e, k).float()
+    with torch.no_grad():
+        output = model(e, t)
 
     return output
 

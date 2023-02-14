@@ -273,7 +273,7 @@ def reverse_tabular_diffusion(dataset, features, diffusion, batch_size = 128, lr
     ema.register(model)
 
     # Only tracked for graphing loss afterwards
-    loss_list = []
+    loss_list, prob_list = [], []
 
     for t in range(training_time_steps):
         permutation_discrete = torch.randperm(discrete.shape[0])
@@ -282,6 +282,7 @@ def reverse_tabular_diffusion(dataset, features, diffusion, batch_size = 128, lr
             indices_discrete = permutation_discrete[i:i+batch_size]
             batch_x_discrete = discrete[indices_discrete]
             k = get_classes(batch_x_discrete).shape[0]       # Will need to change with multiple features
+            k = 2
             # One hot encoding
             batch_x_discrete = torch.nn.functional.one_hot(batch_x_discrete.long(), k)
             # Compute the loss
@@ -297,8 +298,10 @@ def reverse_tabular_diffusion(dataset, features, diffusion, batch_size = 128, lr
             # Update the exponential moving average
             ema.update(model)
         # Print loss
-        print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}', end='\n')
+        p = get_discrete_model_output(model, k, diffusion, 1).squeeze(0)
+        prob_list.append(p)
+        print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
         loss_list.append(loss.item())
 
-    return model, loss_list
+    return model, loss_list, prob_list
     
