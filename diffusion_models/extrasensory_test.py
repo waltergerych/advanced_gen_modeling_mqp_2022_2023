@@ -20,7 +20,7 @@ data = torch.tensor(df.values)
 
 # Variables for diffusion
 NUM_STEPS = 1000         # Low for testing to speed up
-NUM_REVERSE_STEPS = 1000
+NUM_REVERSE_STEPS = 50
 LEARNING_RATE = .0001
 BATCH_SIZE = 128
 HIDDEN_SIZE = 128
@@ -33,20 +33,28 @@ continuous, discrete = separate_tabular_data(data, features)
 discrete = torch.squeeze(discrete[:, 4])        # Prob [.6775, .3225]
 
 # New testing data rather than real data --> Trying to get this working first
-weights = torch.tensor([.8, .2])
+test_data = []
+w1 = torch.tensor([.95, .05])
+w2 = torch.tensor([.2, .3, .5])
 num_samples = 1000
-discrete = torch.multinomial(weights, num_samples, replacement=True)
+test_data.append(torch.multinomial(w1, num_samples, replacement=True))
+test_data.append(torch.multinomial(w2, num_samples, replacement=True))
+discrete = torch.stack(test_data, dim=1)
 
-k = get_classes(discrete).shape[0]
-k = 2
+feature_indices = []
+k = 0
+for i in range(discrete.shape[1]):
+    num = get_classes(discrete[:, i]).shape[0]
+    feature_indices.append((k, k + num))
+    k += num
 
 # Declare model
 model = ConditionalMultinomialModel(NUM_STEPS, HIDDEN_SIZE, k)   # Need to declare as number of classes for feature. Multiple features????
 # model.load_state_dict(torch.load(f'./models/discrete_{NUM_STEPS}.pth'))
-model, loss, probs = reverse_tabular_diffusion(discrete, features, diffusion, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, plot=False, model=model)
+model, loss, probs = reverse_tabular_diffusion(discrete, features, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, plot=False, model=model)
 torch.save(model.state_dict(), f'./models/discrete_{NUM_STEPS}.pth')
 
-output = get_discrete_model_output(model, k, diffusion, 128)
+output = get_discrete_model_output(model, k, 128, feature_indices)
 print(output)
 
 x = range(NUM_REVERSE_STEPS)

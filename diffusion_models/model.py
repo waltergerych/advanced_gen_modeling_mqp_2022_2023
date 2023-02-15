@@ -61,19 +61,14 @@ class ConditionalMultinomialModel(nn.Module):
         self.lin3 = ConditionalLinear(hidden_size, hidden_size, n_steps)
         self.lin4 = nn.Linear(hidden_size, input_size)
     
-    def forward(self, x, y):
+    def forward(self, x, y, feature_indices):
         x = F.softplus(self.lin1(x, y))
         x = F.softplus(self.lin2(x, y))
         x = F.softplus(self.lin3(x, y))
         x = self.lin4(x)
-        return F.softmax(x, dim=1)
-
-"""
-With multiple features, code would look something like this
-# Pass in list of lists to forward method
-# results = []
-# for indices:
-#     result.append(F.softmax(x[start:end]))
-# return torch.concat(results, dim=1)
-"""
+        results = []
+        for i, class_index in enumerate(feature_indices):
+            start, end = class_index
+            results.append(F.softmax(x[:, start:end], dim=1))
+        return torch.cat(results, dim=1)
         

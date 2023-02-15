@@ -161,15 +161,18 @@ def q_x_cat(x_0, diffs, t, k):
     cumprod_1_minus_alpha = extract_cat(diffs.one_minus_alphas_bar_sqrt, t, x_0.shape)
     x_t_probs = cumprod_alpha*probs + cumprod_1_minus_alpha / k
     x_t = resample(x_t_probs)
-    return to_one_hot(x_t, k)
+    
+    return torch.nn.functional.one_hot(x_t, k)
 
-def multinomial_diffusion_noise_estimation(model, x_0, diffs):
+def multinomial_diffusion_noise_estimation(model, x_0, diffs, k, feature_indices):
     """Calculates the loss in estimating the noise of x_t
 
     Args:
         model (ConditionalTabularModel): the model
         x_0 (torch.Tensor): the original categorical data at t=0
         diffs (Diffusion): the class encapsulating the diffusion variables
+        k (int): the total number of classes across all features
+        feature_indices (list<tuples>): a list of the indices for all the features
 
     NOTES:
         x_0: (batch_size, k) for one feature
@@ -187,13 +190,15 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs):
     # Get t-1 and ensure values are not negative
     t_1 = t - 1
     t_1[t_1 == -1] = 0
-
-    # Get number of classes for feature
-    k = x_0.shape[1]        # will need to change with multiple features
-    k = 2
-
+    
     # Get x_t for each time step in batch
-    batch_x_t = q_x_cat(x_0, diffs, t, k)
+    batch_x_list = []
+    for i, index in enumerate(feature_indices):
+        feature = x_0[:, index[0]:index[1]]
+        k_x = index[1] - index[0]
+        batch_feature = q_x_cat(feature, diffs, t, k_x)
+        batch_x_list.append(batch_feature)
+    batch_x_t = torch.cat(batch_x_list, dim=1)
 
     # Extract values for loss
     alpha = extract(diffs.alphas, t, x_0)
@@ -210,10 +215,10 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs):
     # Get random noise for model
     weights = torch.tensor([1/k]).repeat(k)
     e = torch.multinomial(weights, x_0.shape[0], replacement=True)   # Will need to change with multiple classes
-    e = to_one_hot(e, k).float()
+    e = torch.nn.functional.one_hot(e, k).float()
 
     # Get model output from noise and compare with theta
-    output = model(e, t)
+    output = model(e, t, feature_indices)
     theta = theta.squeeze(1)
 
     return (theta - output).square().mean()
@@ -283,9 +288,15 @@ def normalize(probs):
     sum = torch.sum(probs)
     return probs / sum
 
-def to_one_hot(data, k):
+def to_one_hot(data, k, feature_indices):
     """Makes one hot encoding of data with k classes"""
-    return torch.nn.functional.one_hot(data.long(), k)
+    one_hot_list = []
+    for i, class_index in enumerate(feature_indices):
+        start, end = class_index
+        feature = data[:, i]
+        one_hot_list.append(torch.nn.functional.one_hot(feature.long(), end - start))
+    one_hot = torch.cat(one_hot_list, dim=1)
+    return one_hot
 
 def get_model_output(model, input_size, diffusion, num_to_gen):
     """Gets the output of the model
@@ -302,15 +313,15 @@ def get_model_output(model, input_size, diffusion, num_to_gen):
 
     return output
 
-def get_discrete_model_output(model, k, diffusion, num_to_gen):
+def get_discrete_model_output(model, k, num_to_gen, feature_indices):
     """Gets the output of a discrete model"""
     t = torch.Tensor([0]).repeat(num_to_gen).int()
     weights = torch.Tensor([1]) / k
     weights = weights.repeat(k)
     e = torch.multinomial(weights, num_to_gen, replacement=True)   # Will need to change with multiple classes
-    e = to_one_hot(e, k).float()
+    e = torch.nn.functional.one_hot(e, k).float()
     with torch.no_grad():
-        output = model(e, t)
+        output = model(e, t, feature_indices)
 
     return output
 

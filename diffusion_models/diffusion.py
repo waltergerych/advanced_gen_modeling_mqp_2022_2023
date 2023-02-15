@@ -232,7 +232,7 @@ def use_model(model, dataset, diffusion, t):
 ###  CODE TO WORK ON FOR ###
 ###   TABULAR DIFFUSION  ###
 ############################
-def reverse_tabular_diffusion(dataset, features, diffusion, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
+def reverse_tabular_diffusion(dataset, features, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
     """Applies reverse diffusion to a dataset
 
     Args:
@@ -240,6 +240,8 @@ def reverse_tabular_diffusion(dataset, features, diffusion, batch_size = 128, lr
         features (list<strings>): a list of the feature names for the dataset
         diffusion (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
                                 Constants calculated from num_steps input to class constructor
+        k (int): number of total classes across all features
+        feature_indices (list<tuples>): a list of the indices for all the features
         training_time_steps (int): number of training steps to remove noise.  Default is step_size from diffusion class
         plot (bool): true if you want to plot the data showing the removal of the noise
         num_divs (int): number of plots to show. Default is 10 and only applicable if plot=True
@@ -281,12 +283,10 @@ def reverse_tabular_diffusion(dataset, features, diffusion, batch_size = 128, lr
             # Retrieve current batch
             indices_discrete = permutation_discrete[i:i+batch_size]
             batch_x_discrete = discrete[indices_discrete]
-            k = get_classes(batch_x_discrete).shape[0]       # Will need to change with multiple features
-            k = 2
             # One hot encoding
-            batch_x_discrete = torch.nn.functional.one_hot(batch_x_discrete.long(), k)
+            batch_x_discrete = to_one_hot(batch_x_discrete, k, feature_indices)
             # Compute the loss
-            loss = multinomial_diffusion_noise_estimation(model, batch_x_discrete, diffusion)
+            loss = multinomial_diffusion_noise_estimation(model, batch_x_discrete, diffusion, k, feature_indices)
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()
             # Backward pass: compute gradient of the loss with respect to parameters
@@ -298,7 +298,7 @@ def reverse_tabular_diffusion(dataset, features, diffusion, batch_size = 128, lr
             # Update the exponential moving average
             ema.update(model)
         # Print loss
-        p = get_discrete_model_output(model, k, diffusion, 1).squeeze(0)
+        p = get_discrete_model_output(model, k, 1, feature_indices).squeeze(0)
         prob_list.append(p)
         print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
         loss_list.append(loss.item())
