@@ -26,8 +26,8 @@ hdr_plot_style()
 # This means each row of each of these CSVs will be a timeseries of some number of timesteps.
 
 # load the datasets
-train_x, train_y = load_data('../dataset/UCI_HAR_Dataset', 'train')
-test_x, test_y = load_data('../dataset/UCI_HAR_Dataset', 'test')
+train_x, train_y = load_data('dataset/UCI_HAR_Dataset', 'train')
+test_x, test_y = load_data('dataset/UCI_HAR_Dataset', 'test')
 
 # GAF data
 # Option 1: Choose one axis out of the three for each measurement type
@@ -37,13 +37,26 @@ test_x, test_y = load_data('../dataset/UCI_HAR_Dataset', 'test')
 # for f in glob("../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/*/", recursive=True):
     # print(f)
 # print(os.path.exists('../dataset/UCI_HAR_Dataset_Triaxial/train/Intertial_Signals'))
-total_acc_x_train = np.loadtxt('../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/total_acc_x_train.txt')
-body_gyro_x_train = np.loadtxt('../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/body_gyro_x_train.txt')
-CUSTOM_TYPE = "small_noise"
-custom_acc = np.loadtxt(f'../dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/custom_acc_{CUSTOM_TYPE}.txt')
+total_acc_x_train = np.loadtxt('dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/total_acc_x_train.txt')
+body_gyro_x_train = np.loadtxt('dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/body_gyro_x_train.txt')
+CUSTOM_TYPE = "three_values"
+custom_acc = np.loadtxt(f'dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/custom_acc_{CUSTOM_TYPE}.txt')
+
+HAR_data_classes = ["Walking", "Upstairs", "Downstairs", "Sitting", "Standing", "Laying"]
 
 
-classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
+# classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
+
+# Make the class specific directories for GAF images
+parent_folder = "difusion_models/GAF_Class_Data"
+subfolders = []
+for HAR_class in HAR_data_classes:
+    subfolders.append(f"diffusion_models/GAF_Class_Data/{HAR_class}")
+if not os.path.exists(parent_folder):
+    os.makedirs(parent_folder)
+for folder in subfolders:
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 labels = train_y
 dataset = train_x
@@ -55,7 +68,7 @@ from pyts.image import GramianAngularField
 # Define dataset to generate images on (Must be 2D array)
 # Using only x axis of total acceleration to test
 # task = total_acc_x_train[0:1000]
-task = custom_acc
+task = total_acc_x_train
 
 # Define GAF and fit to data
 gadf = GramianAngularField(image_size=48, method='difference')
@@ -64,16 +77,18 @@ X_gadf = gadf.fit_transform(task)
 len_task = len(task)
 
 # Check that the directory to save the images exists or create it
-GAF_DIRECTORY = 'GAF_Testing_Images_Custom'
+GAF_DIRECTORY = 'diffusion_models/GAF_Class_Data'
 if not os.path.isdir(GAF_DIRECTORY):
     os.makedirs(GAF_DIRECTORY, exist_ok=True)
+
+labels_int = [int(x) for x in labels.numpy()]
 
 # Iterate over the trajectories to create the images
 for i in range(len_task):
     print(f'\r{i}/{len_task} - {round(i/len_task*100, 2)}%', end='')
     plt.axis('off')
     plt.imshow(X_gadf[i], extent=[0, 1, 0, 1], cmap = 'coolwarm', aspect = 'auto',vmax=abs(X_gadf[i]).max(), vmin=-abs(X_gadf[i]).max())
-    plt.savefig(f'{GAF_DIRECTORY}/{CUSTOM_TYPE}_{i}.jpg', bbox_inches='tight')
+    plt.savefig(f'{GAF_DIRECTORY}/{HAR_data_classes[labels_int[i]]}/{i}.jpg', bbox_inches='tight')
     plt.close("all")
 
 
