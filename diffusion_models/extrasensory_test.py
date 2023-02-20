@@ -55,37 +55,13 @@ for i in range(discrete.shape[1]):
 
 # Declare model
 model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
-model.load_state_dict(torch.load(f'./models/discrete_{NUM_STEPS}.pth'))
-# model, loss, probs = reverse_tabular_diffusion(discrete, continuous, features, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, plot=False, model=model)
-# torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
+# model.load_state_dict(torch.load(f'./models/discrete_{NUM_STEPS}.pth'))
+model, loss, probs = reverse_tabular_diffusion(discrete, continuous, features, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, plot=False, model=model)
+torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
 
 continuous_output, discrete_output = get_discrete_model_output(model, k, 128, feature_indices)
 print(discrete_output)
 separability(continuous, continuous_output, train_test_ratio=.7)
-
-
-# Create figure and axis objects
-fig, ax = plt.subplots()
-
-# Set axis limits
-ax.set_xlim([-10, 10])
-ax.set_ylim([0, 1])
-
-# Hide axis ticks and labels
-ax.set_yticks([])
-ax.set_xticks([])
-
-# Draw the number line
-ax.axhline(y=0.5, color='k')
-for i in range(-10, 11):
-    ax.axvline(x=i, color='k')
-    ax.text(i, 0.4, str(i), ha='center')
-
-# Add data points to the number line
-ax.scatter(continuous_output, [0.5]*len(continuous_output), color='r', s=50)
-
-# Show the plot
-plt.show()
 
 x = range(NUM_REVERSE_STEPS)
 plt.plot(x, loss)
