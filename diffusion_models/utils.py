@@ -220,7 +220,7 @@ def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k,
     weights = torch.tensor([1/k]).repeat(k)
     e = torch.multinomial(weights, x_0.shape[0], replacement=True)
     e = torch.nn.functional.one_hot(e, k).float()
-    g = torch.randn(x_0_continuous.shape[0]).unsqueeze(1)
+    g = torch.randn(x_0_continuous.shape)
 
     # Get model output from noise and compare with theta
     _, output = model(g, e, t, feature_indices)
@@ -318,14 +318,14 @@ def get_model_output(model, input_size, diffusion, num_to_gen):
 
     return output
 
-def get_discrete_model_output(model, k, num_to_gen, feature_indices):
+def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous):
     """Gets the output of a discrete model"""
     t = torch.Tensor([0]).repeat(num_to_gen).int()
     weights = torch.Tensor([1]) / k
     weights = weights.repeat(k)
-    e = torch.multinomial(weights, num_to_gen, replacement=True)   # Will need to change with multiple classes
+    e = torch.multinomial(weights, num_to_gen, replacement=True)
     e = torch.nn.functional.one_hot(e, k).float()
-    g = torch.randn(num_to_gen).unsqueeze(1)
+    g = torch.randn((num_to_gen, continuous.shape[1]))
     with torch.no_grad():
         continuous_output, discrete_output = model(g, e, t, feature_indices)
 
