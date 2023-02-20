@@ -128,7 +128,7 @@ def loss_variational(model, x_0,alphas_bar_sqrt, one_minus_alphas_bar_sqrt,poste
     output = torch.where(t == 0, decoder_nll, kl)
     return output.mean(-1)
 
-def noise_estimation_loss(model, x_0,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,n_steps):
+def noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, n_steps):
     batch_size = x_0.shape[0]
     # Select a random step for each example
     t = torch.randint(0, n_steps, size=(batch_size // 2 + 1,))
@@ -138,9 +138,12 @@ def noise_estimation_loss(model, x_0,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,n
     # eps multiplier
     am1 = extract(one_minus_alphas_bar_sqrt, t, x_0)
     e = torch.randn_like(x_0)
+    weights = torch.tensor([1/k]).repeat(k)
+    c = torch.multinomial(weights, x_0_discrete.shape[0], replacement=True)
+    c = torch.nn.functional.one_hot(c, k).float()
     # model input
     x = x_0 * a + e * am1
-    output = model(x, t)
+    output, _ = model(x, c, t, feature_indices)
     return (e - output).square().mean()
 
 def q_x_cat(x_0, diffs, t, k):
@@ -164,12 +167,13 @@ def q_x_cat(x_0, diffs, t, k):
     
     return torch.nn.functional.one_hot(x_t, k)
 
-def multinomial_diffusion_noise_estimation(model, x_0, diffs, k, feature_indices):
+def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k, feature_indices):
     """Calculates the loss in estimating the noise of x_t
 
     Args:
         model (ConditionalTabularModel): the model
         x_0 (torch.Tensor): the original categorical data at t=0
+        x_0_continuous (torch.Tensor): the continuous data, used to make gaussian noise for the 
         diffs (Diffusion): the class encapsulating the diffusion variables
         k (int): the total number of classes across all features
         feature_indices (list<tuples>): a list of the indices for all the features
@@ -214,11 +218,12 @@ def multinomial_diffusion_noise_estimation(model, x_0, diffs, k, feature_indices
 
     # Get random noise for model
     weights = torch.tensor([1/k]).repeat(k)
-    e = torch.multinomial(weights, x_0.shape[0], replacement=True)   # Will need to change with multiple classes
+    e = torch.multinomial(weights, x_0.shape[0], replacement=True)
     e = torch.nn.functional.one_hot(e, k).float()
+    g = torch.randn(x_0_continuous.shape[0]).unsqueeze(1)
 
     # Get model output from noise and compare with theta
-    output = model(e, t, feature_indices)
+    _, output = model(g, e, t, feature_indices)
     theta = theta.squeeze(1)
 
     return (theta - output).square().mean()
@@ -320,10 +325,11 @@ def get_discrete_model_output(model, k, num_to_gen, feature_indices):
     weights = weights.repeat(k)
     e = torch.multinomial(weights, num_to_gen, replacement=True)   # Will need to change with multiple classes
     e = torch.nn.functional.one_hot(e, k).float()
+    g = torch.randn(num_to_gen).unsqueeze(1)
     with torch.no_grad():
-        output = model(e, t, feature_indices)
+        continuous_output, discrete_output = model(g, e, t, feature_indices)
 
-    return output
+    return continuous_output, discrete_output[0]
 
 def load_data(dataset, dataset_type):
     """Load data from text file

@@ -227,16 +227,12 @@ def use_model(model, dataset, diffusion, t):
     output = p_sample(model, dataset, t, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
     return output
 
-
-############################
-###  CODE TO WORK ON FOR ###
-###   TABULAR DIFFUSION  ###
-############################
-def reverse_tabular_diffusion(dataset, features, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
+def reverse_categorical_diffusion(discrete, features, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
     """Applies reverse diffusion to a dataset
 
+    NOTE: In order to use, must modify loss function to use only categorical model
     Args:
-        dataset (torch.Tensor): the dataset to be used
+        discrete (torch.Tensor): the dataset to be used
         features (list<strings>): a list of the feature names for the dataset
         diffusion (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
                                 Constants calculated from num_steps input to class constructor
@@ -246,14 +242,9 @@ def reverse_tabular_diffusion(dataset, features, diffusion, k, feature_indices, 
         plot (bool): true if you want to plot the data showing the removal of the noise
         num_divs (int): number of plots to show. Default is 10 and only applicable if plot=True
         model (ConditionalModel): optional argument to train a previously defined model
-
     Returns:
         model (ConditionalModel): the trained model
     """
-    # Split data into continuous and discrete
-    # continuous, discrete = separate_tabular_data(dataset, features)
-    discrete = dataset
-
     # Load variables from diffusion class
     num_steps = diffusion.num_steps
     betas = diffusion.betas
@@ -300,6 +291,85 @@ def reverse_tabular_diffusion(dataset, features, diffusion, k, feature_indices, 
         # Print loss
         p = get_discrete_model_output(model, k, 1, feature_indices).squeeze(0)
         prob_list.append(p)
+        print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
+        loss_list.append(loss.item())
+
+    return model, loss_list, prob_list
+
+############################
+###  CODE TO WORK ON FOR ###
+###   TABULAR DIFFUSION  ###
+############################
+def reverse_tabular_diffusion(discrete, continuous, features, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
+    """Applies reverse diffusion to a dataset
+
+    Args:
+        discrete (torch.Tensor): the discrete features
+        continuous (torch.Tensor): the continuous features
+        features (list<strings>): a list of the feature names for the dataset
+        diffusion (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
+                                Constants calculated from num_steps input to class constructor
+        k (int): number of total classes across all features
+        feature_indices (list<tuples>): a list of the indices for all the features
+        training_time_steps (int): number of training steps to remove noise.  Default is step_size from diffusion class
+        plot (bool): true if you want to plot the data showing the removal of the noise
+        num_divs (int): number of plots to show. Default is 10 and only applicable if plot=True
+        model (ConditionalModel): optional argument to train a previously defined model
+
+    Returns:
+        model (ConditionalModel): the trained model
+    """
+    # Load variables from diffusion class
+    num_steps = diffusion.num_steps
+    betas = diffusion.betas
+    alphas = diffusion.alphas
+    alphas_prod = diffusion.alphas_prod
+    alphas_bar_sqrt = diffusion.alphas_bar_sqrt
+    one_minus_alphas_bar_sqrt = diffusion.one_minus_alphas_bar_sqrt
+
+    if training_time_steps == 0:
+        training_time_steps = num_steps
+
+    # If no model given, create new one
+    if model == None:
+        model = ConditionalMultinomialModel(num_steps, discrete.shape[1])
+
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    # Create EMA model
+    ema = EMA(0.9)
+    ema.register(model)
+
+    # Only tracked for graphing loss afterwards
+    loss_list, prob_list = [], []
+
+    for t in range(training_time_steps):
+        permutation_discrete = torch.randperm(discrete.shape[0])
+        permutation_continuous = torch.randperm(continuous.shape[0])
+        for i in range(0, discrete.shape[0], batch_size):
+            # Retrieve current batch
+            indices_discrete = permutation_discrete[i:i+batch_size]
+            indices_continuous = permutation_continuous[i:i+batch_size]
+            batch_x_discrete = discrete[indices_discrete]
+            batch_x_continuous = continuous[indices_continuous]
+            # One hot encoding
+            batch_x_discrete = to_one_hot(batch_x_discrete, k, feature_indices)
+            # Compute the loss
+            multinomial_loss = multinomial_diffusion_noise_estimation(model, batch_x_discrete, batch_x_continuous, diffusion, k, feature_indices)
+            continuous_loss = noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
+            loss = multinomial_loss + continuous_loss
+            # Before the backward pass, zero all of the network gradients
+            optimizer.zero_grad()
+            # Backward pass: compute gradient of the loss with respect to parameters
+            loss.backward()
+            # Perform gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
+            # Calling the step function to update the parameters
+            optimizer.step()
+            # Update the exponential moving average
+            ema.update(model)
+        # Print loss
+        _, p = get_discrete_model_output(model, k, 1000, feature_indices)
+        prob_list.append(p.squeeze(0))
         print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
         loss_list.append(loss.item())
 
