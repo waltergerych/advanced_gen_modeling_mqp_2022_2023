@@ -1,4 +1,4 @@
-# Helper functions for plotting. 
+# Helper functions for plotting.
 # Original Source: https://github.com/acids-ircam/diffusion_models
 
 import numpy as np
@@ -47,7 +47,7 @@ def prep_plots(titles, fig_size, fig_num=1):
         ax.set_title(title)
         ax_list.append(ax)
     return ax_list
-    
+
 def finalize_plots(axes_list, legend=True, fig_title=None):
     """
     adds grid and legend to all axes in the given list
@@ -66,7 +66,7 @@ def plot_patterns(P,D):
     nPats = P.shape[1]
     nUnits = D.shape[0]
     if nUnits < 2:
-        D = np.concatenate(D, np.zeros(1,nPats)) 
+        D = np.concatenate(D, np.zeros(1,nPats))
     # Create the figure
     fig = plt.figure(figsize=(10, 8))
     ax = plt.gca()
@@ -101,10 +101,10 @@ def plot_boundary(W,iVal,style,fig):
             color = colors[int((3 * iVal + 9) % len(colors))]
         plt.plot(xLims,(-np.dot(W[i, 1], xLims) - W[i, 0]) / W[i, 2], linestyle=style, color=color, linewidth=1.5);
         fig.canvas.draw()
-        
+
 def visualize_boundary_linear(X, y, model):
 # VISUALIZEBOUNDARYLINEAR plots a linear decision boundary learned by the SVM
-#   VISUALIZEBOUNDARYLINEAR(X, y, model) plots a linear decision boundary 
+#   VISUALIZEBOUNDARYLINEAR(X, y, model) plots a linear decision boundary
 #   learned by the SVM and overlays the data on it
     hdr_plot_style()
     w = model["w"]
@@ -112,22 +112,22 @@ def visualize_boundary_linear(X, y, model):
     xp = np.linspace(np.min(X[:, 0]), np.max(X[:, 0]), 100).transpose()
     yp = - (w[0] * xp + b) / w[1]
     plt.figure(figsize=(12, 8))
-    pos = (y == 1)[:, 0] 
+    pos = (y == 1)[:, 0]
     neg = (y == -1)[:, 0]
     plt.scatter(X[pos, 0], X[pos, 1], marker='x', linewidths=2, s=23, c=[0, 0.5, 0])
     plt.scatter(X[neg, 0], X[neg, 1], marker='o', linewidths=2, s=23, c=[1, 0, 0])
     plt.plot(xp, yp, '-b')
     plt.scatter(model["X"][:, 0], model["X"][:, 1], marker='o', linewidths=4, s=40, c=None, edgecolors=[0.1, 0.1, 0.1])
-    
+
 def plot_data(X, y):
-    #PLOTDATA Plots the data points X and y into a new figure 
+    #PLOTDATA Plots the data points X and y into a new figure
     #   PLOTDATA(x,y) plots the data points with + for the positive examples
     #   and o for the negative examples. X is assumed to be a Mx2 matrix.
     #
     # Note: This was slightly modified such that it expects y = 1 or y = 0
     hdr_plot_style()
     # Find Indices of Positive and Negative Examples
-    pos = (y == 1)[:, 0] 
+    pos = (y == 1)[:, 0]
     neg = (y == 0)[:, 0]
     # Plot Examples
     fig = plt.figure(figsize=(12, 8))
@@ -137,7 +137,7 @@ def plot_data(X, y):
 
 def visualize_boundary(X, y, model):
     #VISUALIZEBOUNDARY plots a non-linear decision boundary learned by the SVM
-    #   VISUALIZEBOUNDARYLINEAR(X, y, model) plots a non-linear decision 
+    #   VISUALIZEBOUNDARYLINEAR(X, y, model) plots a non-linear decision
     #   boundary learned by the SVM and overlays the data on it
     hdr_plot_style()
     # Plot the training data on top of the boundary
@@ -154,26 +154,26 @@ def visualize_boundary(X, y, model):
     plt.contour(X1, X2, vals, [1, 1], c='b')
     # Plot the support vectors
     plt.scatter(model["X"][:, 0], model["X"][:, 1], marker='o', linewidths=4, s=10, c=[0.1, 0.1, 0.1])
-    
+
 def plot_svc_decision_function(model, ax=None, plot_support=True):
     """Plot the decision function for a 2D SVC"""
     if ax is None:
         ax = plt.gca()
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
-    
+
     # create grid to evaluate model
     x = np.linspace(xlim[0], xlim[1], 30)
     y = np.linspace(ylim[0], ylim[1], 30)
     Y, X = np.meshgrid(y, x)
     xy = np.vstack([X.ravel(), Y.ravel()]).T
     P = model.decision_function(xy).reshape(X.shape)
-    
+
     # plot decision boundary and margins
     ax.contour(X, Y, P, colors='w',
                levels=[-1, 0, 1], alpha=0.9,
                linestyles=['--', '-', '--'])
-    
+
     # plot support vectors
     if plot_support:
         ax.scatter(model.support_vectors_[:, 0],
@@ -181,35 +181,35 @@ def plot_svc_decision_function(model, ax=None, plot_support=True):
                    s=300, linewidth=2, edgecolor='w', facecolors='none');
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
-    
+
 
 def plot_gaussian_ellipsoid(m, C, sdwidth=1, npts=None, axh=None, color='r'):
     # PLOT_GAUSSIAN_ELLIPSOIDS plots 2-d and 3-d Gaussian distributions
     #
-    # H = PLOT_GAUSSIAN_ELLIPSOIDS(M, C) plots the distribution specified by 
-    #  mean M and covariance C. The distribution is plotted as an ellipse (in 
-    #  2-d) or an ellipsoid (in 3-d).  By default, the distributions are 
-    #  plotted in the current axes. 
+    # H = PLOT_GAUSSIAN_ELLIPSOIDS(M, C) plots the distribution specified by
+    #  mean M and covariance C. The distribution is plotted as an ellipse (in
+    #  2-d) or an ellipsoid (in 3-d).  By default, the distributions are
+    #  plotted in the current axes.
 
-    # PLOT_GAUSSIAN_ELLIPSOIDS(M, C, SD) uses SD as the standard deviation 
-    #  along the major and minor axes (larger SD => larger ellipse). By 
-    #  default, SD = 1. 
-    # PLOT_GAUSSIAN_ELLIPSOIDS(M, C, SD, NPTS) plots the ellipse or 
-    #  ellipsoid with a resolution of NPTS 
+    # PLOT_GAUSSIAN_ELLIPSOIDS(M, C, SD) uses SD as the standard deviation
+    #  along the major and minor axes (larger SD => larger ellipse). By
+    #  default, SD = 1.
+    # PLOT_GAUSSIAN_ELLIPSOIDS(M, C, SD, NPTS) plots the ellipse or
+    #  ellipsoid with a resolution of NPTS
     #
     # PLOT_GAUSSIAN_ELLIPSOIDS(M, C, SD, NPTS, AX) adds the plot to the
     #  axes specified by the axis handle AX.
     #
-    # Examples: 
+    # Examples:
     # -------------------------------------------
     #  # Plot three 2-d Gaussians
-    #  figure; 
+    #  figure;
     #  h1 = plot_gaussian_ellipsoid([1 1], [1 0.5; 0.5 1]);
     #  h2 = plot_gaussian_ellipsoid([2 1.5], [1 -0.7; -0.7 1]);
     #  h3 = plot_gaussian_ellipsoid([0 0], [1 0; 0 1]);
-    #  set(h2,'color','r'); 
+    #  set(h2,'color','r');
     #  set(h3,'color','g');
-    # 
+    #
     #  # "Contour map" of a 2-d Gaussian
     #  figure;
     #  for sd = [0.3:0.4:4],
@@ -222,10 +222,10 @@ def plot_gaussian_ellipsoid(m, C, sdwidth=1, npts=None, axh=None, color='r'):
     #  h2 = plot_gaussian_ellipsoid([1.5 1 .5], [1 -0.7 0.6; -0.7 1 0; 0.6 0 1]);
     #  h3 = plot_gaussian_ellipsoid([1 2 2], [0.5 0 0; 0 0.5 0; 0 0 0.5]);
     #  set(h2,'facealpha',0.6);
-    #  view(129,36); set(gca,'proj','perspective'); grid on; 
+    #  view(129,36); set(gca,'proj','perspective'); grid on;
     #  grid on; axis equal; axis tight;
     # -------------------------------------------
-    # 
+    #
     #  Gautam Vallabha, Sep-23-2007, Gautam.Vallabha@mathworks.com
 
     #  Revision 1.0, Sep-23-2007
@@ -233,11 +233,11 @@ def plot_gaussian_ellipsoid(m, C, sdwidth=1, npts=None, axh=None, color='r'):
     #  Revision 1.1, 26-Sep-2007
     #    - NARGOUT==0 check added.
     #    - Help added on NPTS for ellipsoids
-    
+
     if axh is None:
         axh = plt.gca()
-    if m.size != len(m): 
-        raise Exception('M must be a vector'); 
+    if m.size != len(m):
+        raise Exception('M must be a vector');
     if (m.size == 2):
         h = show2d(m[:], C, sdwidth, npts, axh, color)
     elif (m.size == 3):
@@ -273,7 +273,7 @@ def show3d(means, C, sdwidth, npts=None, axh=None):
         print('warning: negative eigenvalues')
         d = np.max(d, 0)
     d = sdwidth * np.sqrt(d); # convert variance to sdwidth*sd
-    bp = (v * d * ap) + np.matlib.repmat(means, 1, np.size(ap,2)); 
+    bp = (v * d * ap) + np.matlib.repmat(means, 1, np.size(ap,2));
     xp = np.reshape(bp[0,:], np.size(x));
     yp = np.reshape(bp[1,:], np.size(y));
     zp = np.reshape(bp[2,:], np.size(z));
@@ -323,7 +323,7 @@ def fit_gaussian_mixture(X_s):
 def draw_ellipse(position, covariance, ax=None, **kwargs):
     """Draw an ellipse with a given position and covariance"""
     ax = ax or plt.gca()
-    
+
     # Convert covariance to principal axes
     if covariance.shape == (2, 2):
         U, s, Vt = np.linalg.svd(covariance)
@@ -332,12 +332,12 @@ def draw_ellipse(position, covariance, ax=None, **kwargs):
     else:
         angle = 0
         width, height = 2 * np.sqrt(covariance)
-    
+
     # Draw the Ellipse
     for nsig in range(1, 4):
         ax.add_patch(Ellipse(position, nsig * width, nsig * height,
                              angle, **kwargs))
-        
+
 def plot_gmm(gmm, X, label=True, ax=None):
     plt.figure(figsize=(10,8))
     ax = ax or plt.gca()
@@ -347,7 +347,7 @@ def plot_gmm(gmm, X, label=True, ax=None):
     else:
         ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
     ax.axis('equal')
-    
+
     w_factor = 0.4 / gmm.weights_.max()
     for pos, covar, w in zip(gmm.means_, gmm.covariances_, gmm.weights_):
         draw_ellipse(pos, covar, alpha=w * w_factor)

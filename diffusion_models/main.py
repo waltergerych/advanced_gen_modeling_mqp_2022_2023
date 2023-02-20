@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.feature_selection import SelectKBest
 
-from utils import * 
+from utils import *
 from model import ConditionalModel
 from ema import EMA
 from evaluate import *
@@ -36,7 +36,7 @@ NUM_STEPS = 2000
 # Number of training steps to do in reverse diffusion (epochs)
 NUM_REVERSE_STEPS = 10000
 # Number of graphs to plot to show the addition of noise over time (not including X_0)
-NUM_DIVS = 10 
+NUM_DIVS = 10
 
 # Use feature selection to select most important features
 feature_selector = SelectKBest(k=NUM_FEATURES)
@@ -115,8 +115,8 @@ for i in range(len(classes)):
     # Get outputs of both models
     diffusion_output = get_model_output(model, input_size, ddpm, num_to_gen)
     gan_output = generate_data([generator], num_to_gen, generator_input_size)
-    
-    # CODE TO GRAPH 10 PLOTS OF REMOVING NOISE FOR EACH CLASS 
+
+    # CODE TO GRAPH 10 PLOTS OF REMOVING NOISE FOR EACH CLASS
     # --> MUST CHANGE 'get_model_output' to return x_seq rather than x_seq[-1]
     # true_batch, true_labels = get_activity_data(dataset, labels, i)
     # for j in range(0, NUM_STEPS, 10):
@@ -155,4 +155,3 @@ separability(dataset, diffusion_data, test_train_ratio)
 # binary_machine_evaluation(dataset, labels, gan_data, gan_labels, classes, test_train_ratio)
 # multiclass_machine_evaluation(dataset, labels, gan_data, gan_labels, test_train_ratio)
 # separability(dataset, gan_data, test_train_ratio)
-

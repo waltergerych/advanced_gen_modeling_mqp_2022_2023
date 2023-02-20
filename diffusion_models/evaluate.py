@@ -72,7 +72,7 @@ def perform_pca(real, fake, title=None):
     ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
     ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
     ax.set_title(f'PCA for class {title}', fontsize=TITLE_FONT_SIZE)
-    # Get axis ranges 
+    # Get axis ranges
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
 
@@ -141,7 +141,7 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, ov
     ax.set_xlabel("PC1")
     ax.set_ylabel("PC2")
     ax.set_title("PCA with Real Data")
-    # Get axis ranges 
+    # Get axis ranges
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
 
@@ -249,12 +249,12 @@ def make_histograms(data, num_features):
 
 def calculate_kl(real, model, diffusion, num_to_gen):
     """Calculates the kl divergence between fake data and the real data
-    
+
     Args:
         real (torch.Tensor): the real data
         model (ConditionalModel): the diffusion model
         diffusion (Diffusion): the class holding denoising variables
-        
+
     Returns:
         kl_divergence (float)
     """
@@ -293,7 +293,7 @@ def downsample(data, labels, target_index, classes):
         labels (torch.Tensor): the labels for the data
         target_index (int): target class index, an integer 0-5
         classes (list<string>): a list of the classes
-    
+
     Returns:
         new_data (torch.Tensor): the balanced data set
         new_labels (torch.Tensor): the labels for the new data, where 1 is the target class and 0 is all other classes
@@ -518,7 +518,7 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
         # Train classifier on real data
         print('Testing classifier trained on real data')
         classifier = build_binary_classifier(real_train_x, real_train_y, classes, i)
-        
+
         # Train on real, test on real
         print('Evaluating on real data')
         acc, precision, recall, f1 = test_binary_classifier(classifier, real_test_x, real_test_y, classes, i)
@@ -560,7 +560,7 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
         flag = "a"
         file_name = f"{CLASSIFIER_DATA_PATH}/binary_classifier_{metric}.csv"
         if not os.path.exists(file_name): flag = "w"
-            
+
         with open(file_name, flag) as csv_file:
             csv_writer = csv.writer(csv_file)
             # Write headers
@@ -571,8 +571,8 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
                     for i in range(len(classes)):
                         csv_row.append(csv_data[train][test][metric][i])
                     csv_writer.writerow(csv_row)
-                            
-            
+
+
 
 def multiclass_machine_evaluation(dataset, labels, fake, fake_labels, test_train_ratio):
     """Evaluates data multiclass classifiers and prints results
@@ -591,7 +591,7 @@ def multiclass_machine_evaluation(dataset, labels, fake, fake_labels, test_train
     # Train classifier on real data
     print('Testing classifier trained on real data')
     classifier = build_multiclass_classifier(real_train_x, real_train_y)
-    
+
     print('Evaluating on real data')
     test_multiclass_classifier(classifier, real_test_x, real_test_y)
 
@@ -607,4 +607,3 @@ def multiclass_machine_evaluation(dataset, labels, fake, fake_labels, test_train
 
     print('Evaluating on fake data')
     test_multiclass_classifier(classifier, fake_test_x, fake_test_y)
-    

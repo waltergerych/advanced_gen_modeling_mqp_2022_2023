@@ -6,7 +6,7 @@ from sklearn.datasets import make_checkerboard,make_circles,make_moons,make_s_cu
 from helper_plot import hdr_plot_style
 import torch
 import torch.optim as optim
-from utils import * 
+from utils import *
 from sklearn.preprocessing import OneHotEncoder
 
 from model import ConditionalModel
@@ -57,7 +57,7 @@ def get_denoising_variables(num_steps):
         num_steps (int): the number of steps in the forward diffusion
 
     Returns:
-        diffusion (Diffusion): a class encapsulating the denoising variables 
+        diffusion (Diffusion): a class encapsulating the denoising variables
     """
     diffusion = Diffusion(num_steps)
 
@@ -66,7 +66,7 @@ def get_denoising_variables(num_steps):
 # Add t time steps of noise to the data x
 def q_x(x_0, t, model, noise=None):
     """Function to add t time steps of noise to continuous data x
-    
+
     Args:
         x_0 (torch.Tensor): the data to add noise to
         t (torch.Tensor): the number of time steps to add
@@ -84,7 +84,7 @@ def q_x(x_0, t, model, noise=None):
 
 def visualize_forward(dataset, num_steps, num_divs, diffusion):
     """Vizualizes the forward diffusion process
-    
+
     Args:
         dataset (torch.Tensor): the original dataset without noise
         num_steps (int): number of steps of noise to be removed
@@ -105,7 +105,7 @@ def visualize_forward(dataset, num_steps, num_divs, diffusion):
 
 def visualize_backward(model, dataset, num_steps, num_divs, diffusion, heatmap=False, reverse=False):
     """Vizualizes the backwards diffusion process
-    
+
     Args:
         model (class: ConditionalModel): the model being used
         dataset (torch.Tensor): the original dataset without noise
@@ -374,4 +374,3 @@ def reverse_tabular_diffusion(discrete, continuous, features, diffusion, k, feat
         loss_list.append(loss.item())
 
     return model, loss_list, prob_list
-    

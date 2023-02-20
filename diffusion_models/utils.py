@@ -148,7 +148,7 @@ def noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_b
 
 def q_x_cat(x_0, diffs, t, k):
     """Function to add t time steps of noise to discrete data x
-    
+
     Args:
         x_0 (torch.Tensor): the discrete data to add noise to
         diffs (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
@@ -164,7 +164,7 @@ def q_x_cat(x_0, diffs, t, k):
     cumprod_1_minus_alpha = extract_cat(diffs.one_minus_alphas_bar_sqrt, t, x_0.shape)
     x_t_probs = cumprod_alpha*probs + cumprod_1_minus_alpha / k
     x_t = resample(x_t_probs)
-    
+
     return torch.nn.functional.one_hot(x_t, k)
 
 def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k, feature_indices):
@@ -173,7 +173,7 @@ def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k,
     Args:
         model (ConditionalTabularModel): the model
         x_0 (torch.Tensor): the original categorical data at t=0
-        x_0_continuous (torch.Tensor): the continuous data, used to make gaussian noise for the 
+        x_0_continuous (torch.Tensor): the continuous data, used to make gaussian noise for the
         diffs (Diffusion): the class encapsulating the diffusion variables
         k (int): the total number of classes across all features
         feature_indices (list<tuples>): a list of the indices for all the features
@@ -194,7 +194,7 @@ def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k,
     # Get t-1 and ensure values are not negative
     t_1 = t - 1
     t_1[t_1 == -1] = 0
-    
+
     # Get x_t for each time step in batch
     batch_x_list = []
     for i, index in enumerate(feature_indices):
@@ -209,7 +209,7 @@ def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k,
     one_minus_alpha = 1 - alpha
     alphas_prod = extract(diffs.alphas_prod, t_1, x_0)
     one_minus_alpha_prod = 1 - alphas_prod
-    
+
     # Calculate theta (expected value)
     theta = (alpha * batch_x_t + one_minus_alpha / k) * (alphas_prod * x_0 + one_minus_alpha_prod / k)
 
@@ -239,7 +239,7 @@ def log_add_exp(a, b):
 
 def resample2(distribution, n):
     """Resamples from a distribution n times
-    
+
     Was being used, but in original fw diffusion used resample function below"""
     log_probs = F.log_softmax(distribution, dim=-1)
     num_feat = distribution.shape[0]
@@ -256,7 +256,7 @@ def resample2(distribution, n):
 
 def resample(distribution):
     """Resamples from a probability distribution
-    
+
     Args:
         distribution (torch.Tensor): 2D tensor with second dimension with the probabilties
     """
@@ -264,7 +264,7 @@ def resample(distribution):
 
 def get_probs(data):
     """Calculate probablity distribution for given data with K classes
-    
+
     Args:
         data (torch.Tensor): a 2D tensor of data with the second dimension being the one-hot encodings
         K (int): number of classes
@@ -278,7 +278,7 @@ def get_probs(data):
 
 def get_classes(data):
     """Finds all the classes in the data
-    
+
     Returns:
         (torch.Tensor): a tensor of all the classes
 
@@ -305,7 +305,7 @@ def to_one_hot(data, k, feature_indices):
 
 def get_model_output(model, input_size, diffusion, num_to_gen):
     """Gets the output of the model
-    
+
     Args:
         model (ConditionalModel): the model to be used
         input_size (int): the number of dimensions of the dataset
@@ -410,7 +410,7 @@ def read_user_data(uid):
 
 def separate_tabular_data(data, features):
     """Retrieves the discrete and continuous features from a dataset
-    
+
     Args:
         data (torch.Tensor): the data to split
         features (list<strings>): a list of the feature names of the columns for the data
@@ -426,7 +426,7 @@ def separate_tabular_data(data, features):
             discrete_indices.append(i)
         else:
             continuous_indices.append(i)
-    
+
     discrete = torch.index_select(data, 1, torch.tensor(discrete_indices))
     continuous = torch.index_select(data, 1, torch.tensor(continuous_indices))
 
@@ -434,12 +434,11 @@ def separate_tabular_data(data, features):
 
 def get_condition(discrete):
     """Gets a random categorical variable and samples from that distribution
-    
+
     Args:
         discrete (torch.Tensor): the discrete features
-        
+
     Returns:
         condition (int): a one-hot encoded condition of a random categorical variable
     """
     # Function needed for tabular diffusion training model
-    

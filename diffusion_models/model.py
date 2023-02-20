@@ -28,7 +28,7 @@ class ConditionalModel(nn.Module):
         self.lin2 = ConditionalLinear(128, 128, n_steps)
         self.lin3 = ConditionalLinear(128, 128, n_steps)
         self.lin4 = nn.Linear(128, input_size)
-    
+
     def forward(self, x, y):
         x = F.softplus(self.lin1(x, y))
         x = F.softplus(self.lin2(x, y))
@@ -44,7 +44,7 @@ class ConditionalTabularModel(nn.Module):
         self.lin3 = ConditionalLinear(hidden_size, hidden_size, n_steps)
         self.lin4 = nn.Linear(hidden_size, continuous_size)
         self.lin5 = nn.Linear(hidden_size, discrete_size)
-    
+
     def forward(self, x_c, x_d, y, feature_indices):
         x = torch.cat([x_c, x_d], dim=1)
         x = F.softplus(self.lin1(x, y))
@@ -67,7 +67,7 @@ class ConditionalMultinomialModel(nn.Module):
         self.lin2 = ConditionalLinear(hidden_size, hidden_size, n_steps)
         self.lin3 = ConditionalLinear(hidden_size, hidden_size, n_steps)
         self.lin4 = nn.Linear(hidden_size, input_size)
-    
+
     def forward(self, x, y, feature_indices):
         x = F.softplus(self.lin1(x, y))
         x = F.softplus(self.lin2(x, y))
@@ -78,4 +78,3 @@ class ConditionalMultinomialModel(nn.Module):
             start, end = class_index
             results.append(F.softmax(x[:, start:end], dim=1))
         return torch.cat(results, dim=1)
-        

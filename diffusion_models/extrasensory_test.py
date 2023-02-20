@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 
-from utils import * 
+from utils import *
 from model import ConditionalModel
 from model import ConditionalTabularModel
 from ema import EMA
@@ -89,7 +89,7 @@ plt.show()
 """
 NOTES:
     Currently working on just discrete diffusion with ConditionalMultinomialModel.
-    
+
     Next Steps:
         - Get model to learn/work with test data with one feature
         - Get model to learn/work with test data with multiple features (concat feature one-hots)
@@ -110,7 +110,7 @@ Questions for Walter
 - Can you build a Linear Layer of 0 size?
 Ex: self.lin = nn.Linear(128, cont_size) with cont_size = 0
 
-Reasoning --> Make two models/layers, one for continuous and one for discrete.  
+Reasoning --> Make two models/layers, one for continuous and one for discrete.
 If data happens to have no discrete features, size would be (128, 0)
 
 """
