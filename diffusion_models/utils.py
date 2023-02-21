@@ -137,13 +137,15 @@ def noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_b
     a = extract(alphas_bar_sqrt, t, x_0)
     # eps multiplier
     am1 = extract(one_minus_alphas_bar_sqrt, t, x_0)
+    # Get noise for input
     e = torch.randn_like(x_0)
     weights = torch.tensor([1/k]).repeat(k)
     c = torch.multinomial(weights, x_0_discrete.shape[0], replacement=True)
     c = torch.nn.functional.one_hot(c, k).float()
     # model input
     x = x_0 * a + e * am1
-    output, _ = model(x, c, t, feature_indices)
+    # CHANGE TO THE FOLLOWING LINE. WAS FED X INSTEAD OF E INTO THE MODEL
+    output, _ = model(e, c, t, feature_indices)
     return (e - output).square().mean()
 
 def q_x_cat(x_0, diffs, t, k):
@@ -213,8 +215,11 @@ def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k,
     # Calculate theta (expected value)
     theta = (alpha * batch_x_t + one_minus_alpha / k) * (alphas_prod * x_0 + one_minus_alpha_prod / k)
 
-    # Normalize each time step so it sums to one
-    theta = torch.nn.functional.normalize(theta, p=1, dim=1)
+    # Normalize each feature at every time step so it sums to one
+    feature_normalization = []
+    for index in feature_indices:
+        feature_normalization.append(torch.nn.functional.normalize(theta[:, index[0]:index[1]], p=1, dim=1))
+    theta = torch.cat(feature_normalization, dim=1)
 
     # Get random noise for model
     weights = torch.tensor([1/k]).repeat(k)
@@ -319,7 +324,12 @@ def get_model_output(model, input_size, diffusion, num_to_gen):
     return output
 
 def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous):
-    """Gets the output of a discrete model"""
+    """Gets the output of a discrete model
+    
+    Returns:
+        continuous_output (torch.Tensor): the generated data
+        discrete_output (torch.Tensor): a probability tensor of size n*k
+    """
     t = torch.Tensor([0]).repeat(num_to_gen).int()
     weights = torch.Tensor([1]) / k
     weights = weights.repeat(k)

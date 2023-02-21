@@ -300,13 +300,12 @@ def reverse_categorical_diffusion(discrete, features, diffusion, k, feature_indi
 ###  CODE TO WORK ON FOR ###
 ###   TABULAR DIFFUSION  ###
 ############################
-def reverse_tabular_diffusion(discrete, continuous, features, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
+def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
     """Applies reverse diffusion to a dataset
 
     Args:
         discrete (torch.Tensor): the discrete features
         continuous (torch.Tensor): the continuous features
-        features (list<strings>): a list of the feature names for the dataset
         diffusion (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
                                 Constants calculated from num_steps input to class constructor
         k (int): number of total classes across all features
