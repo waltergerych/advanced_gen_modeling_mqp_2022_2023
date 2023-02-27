@@ -60,7 +60,7 @@ def main():
     model, loss, probs = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, plot=False, model=model)
     torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
 
-    continuous_output, discrete_output = utils.get_discrete_model_output(model, k, 128, feature_indices, continuous)
+    continuous_output, discrete_output = utils.get_tabular_model_output(model, k, 128, feature_indices, continuous, diffusion)
     print(discrete_output)
     eval.separability(continuous, continuous_output, train_test_ratio=.7)
 
