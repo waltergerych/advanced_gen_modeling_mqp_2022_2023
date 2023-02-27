@@ -42,8 +42,15 @@ class ConditionalTabularModel(nn.Module):
         self.lin1 = ConditionalLinear(continuous_size + discrete_size, hidden_size, n_steps)
         self.lin2 = ConditionalLinear(hidden_size, hidden_size, n_steps)
         self.lin3 = ConditionalLinear(hidden_size, hidden_size, n_steps)
-        self.lin4 = nn.Linear(hidden_size, continuous_size)
-        self.lin5 = nn.Linear(hidden_size, discrete_size)
+        self.lin4 = nn.Linear(hidden_size, hidden_size)
+        self.lin5 = nn.ReLU()
+        self.lin6 = nn.Linear(hidden_size, hidden_size)
+        self.lin7 = nn.ReLU()
+        self.lin8 = nn.Linear(hidden_size, hidden_size)
+        self.lin9 = nn.ReLU()
+        self.lin10 = nn.Linear(hidden_size, hidden_size)
+        self.lin11 = nn.Linear(hidden_size, continuous_size)
+        self.lin12 = nn.Linear(hidden_size, discrete_size)
 
     def forward(self, x_c, x_d, y, feature_indices):
         x = torch.cat([x_c, x_d], dim=1)
@@ -51,7 +58,14 @@ class ConditionalTabularModel(nn.Module):
         x = F.softplus(self.lin2(x, y))
         x = F.softplus(self.lin3(x, y))
         x_c = self.lin4(x)
-        x_d = self.lin5(x)
+        x_c = self.lin5(x_c)
+        x_c = self.lin6(x_c)
+        x_c = self.lin7(x_c)
+        x_c = self.lin8(x_c)
+        x_c = self.lin9(x_c)
+        x_c = self.lin10(x_c)
+        x_c = self.lin11(x_c)
+        x_d = self.lin12(x)
         results = []
         for class_index in feature_indices:
             start, end = class_index

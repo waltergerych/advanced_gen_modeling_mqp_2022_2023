@@ -353,9 +353,10 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
             # One hot encoding
             batch_x_discrete = to_one_hot(batch_x_discrete, k, feature_indices)
             # Compute the loss
-            multinomial_loss = multinomial_diffusion_noise_estimation(model, batch_x_discrete, batch_x_continuous, diffusion, k, feature_indices)
+            # multinomial_loss = multinomial_diffusion_noise_estimation(model, batch_x_discrete, batch_x_continuous, diffusion, k, feature_indices)
             continuous_loss = noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
-            loss = multinomial_loss + continuous_loss
+            # loss = multinomial_loss + continuous_loss
+            loss = continuous_loss
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()
             # Backward pass: compute gradient of the loss with respect to parameters

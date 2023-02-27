@@ -70,6 +70,7 @@ def p_sample(model, x, t,alphas,betas,one_minus_alphas_bar_sqrt):
     return (sample)
 
 def p_sample_loop(model, shape,n_steps,alphas,betas,one_minus_alphas_bar_sqrt):
+    """Removes noise from data one step at a time and appends each step into a list"""
     cur_x = torch.randn(shape)
     x_seq = [cur_x]
     for i in reversed(range(n_steps)):
@@ -144,8 +145,7 @@ def noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_b
     c = torch.nn.functional.one_hot(c, k).float()
     # model input
     x = x_0 * a + e * am1
-    # CHANGE TO THE FOLLOWING LINE. WAS FED X INSTEAD OF E INTO THE MODEL
-    output, _ = model(e, c, t, feature_indices)
+    output, _ = model(x, c, t, feature_indices)
     return (e - output).square().mean()
 
 def q_x_cat(x_0, diffs, t, k):
@@ -323,8 +323,32 @@ def get_model_output(model, input_size, diffusion, num_to_gen):
 
     return output
 
+def p_tabular_sample(model, x, e, t, feature_indices, alphas, betas, one_minus_alphas_bar_sqrt):
+    t = torch.tensor([t])
+    # Factor to the model output
+    eps_factor = ((1 - extract(alphas, t, x)) / extract(one_minus_alphas_bar_sqrt, t, x))
+    # Model output
+    eps_theta, _ = model(x, e, t, feature_indices)
+    # Final values
+    mean = (1 / extract(alphas, t, x).sqrt()) * (x - (eps_factor * eps_theta))
+    # Generate z
+    z = torch.randn_like(x)
+    # Fixed sigma
+    sigma_t = extract(betas, t, x).sqrt()
+    sample = mean + sigma_t * z
+    return (sample)
+
+def p_tabular_sample_loop(model, e, shape, feature_indices, n_steps, alphas, betas, one_minus_alphas_bar_sqrt):
+    """Removes noise from data one step at a time and appends each step into a list"""
+    cur_x = torch.randn(shape)
+    x_seq = [cur_x]
+    for i in reversed(range(n_steps)):
+        cur_x = p_tabular_sample(model, cur_x, e, i, feature_indices, alphas, betas, one_minus_alphas_bar_sqrt)
+        x_seq.append(cur_x)
+    return x_seq[-1]
+
 def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous):
-    """Gets the output of a discrete model
+    """Gets just the discrete output from a model
     
     Returns:
         continuous_output (torch.Tensor): the generated data
@@ -338,6 +362,25 @@ def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous)
     g = torch.randn((num_to_gen, continuous.shape[1]))
     with torch.no_grad():
         continuous_output, discrete_output = model(g, e, t, feature_indices)
+
+    return continuous_output, discrete_output[0]
+
+def get_tabular_model_output(model, k, num_to_gen, feature_indices, continuous, diffusion):
+    """Gets the output of a tabular model
+    
+    Returns:
+        continuous_output (torch.Tensor): the generated data
+        discrete_output (torch.Tensor): a probability tensor of size n*k
+    """
+    t = torch.Tensor([0]).repeat(num_to_gen).int()
+    weights = torch.Tensor([1]) / k
+    weights = weights.repeat(k)
+    e = torch.multinomial(weights, num_to_gen, replacement=True)
+    e = torch.nn.functional.one_hot(e, k).float()
+    g = torch.randn((num_to_gen, continuous.shape[1]))
+    with torch.no_grad():
+        _, discrete_output = model(g, e, t, feature_indices)
+        continuous_output = p_tabular_sample_loop(model, e, torch.Size([num_to_gen, continuous.shape[1]]), feature_indices, diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
 
     return continuous_output, discrete_output[0]
 

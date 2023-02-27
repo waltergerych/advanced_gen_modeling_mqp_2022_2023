@@ -21,7 +21,7 @@ data = torch.tensor(df.values)
 
 # Variables for diffusion
 NUM_STEPS = 100         # Low for testing to speed up
-NUM_REVERSE_STEPS = 1000
+NUM_REVERSE_STEPS = 300
 LEARNING_RATE = .0001
 BATCH_SIZE = 128
 HIDDEN_SIZE = 128
@@ -43,8 +43,8 @@ test_data.append(torch.multinomial(w2, num_samples, replacement=True))
 discrete = torch.stack(test_data, dim=1)
 
 test_cont_data = []
-test_cont_data.append(torch.randn(num_samples))
-test_cont_data.append(torch.randn(num_samples) * 2 + 1)
+test_cont_data.append(torch.multiply(torch.randn(num_samples), torch.randn(num_samples)))
+test_cont_data.append(torch.randn(num_samples) * .25 + 3)
 continuous = torch.stack(test_cont_data, dim=1)
 
 feature_indices = []
@@ -60,8 +60,9 @@ model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
 model, loss, probs = reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, plot=False, model=model)
 torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
 
-continuous_output, discrete_output = get_discrete_model_output(model, k, 128, feature_indices, continuous)
+continuous_output, discrete_output = get_tabular_model_output(model, k, 128, feature_indices, continuous, diffusion)
 print(discrete_output)
+print(continuous_output)
 separability(continuous, continuous_output, train_test_ratio=.7)
 
 x = range(NUM_REVERSE_STEPS)
