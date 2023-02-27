@@ -1,18 +1,17 @@
 # External libraries
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report
 
 class Classifier(nn.Module):
     """
     Class for feed-forward model from pytorch.
     """
+
 
     def __init__(self, input_size, hidden_size):
         """
@@ -41,6 +40,7 @@ class Classifier(nn.Module):
         data = F.relu(data)
         data = self.fc2(data)
         return data
+
 
 def get_accuracy(model, data, labels, class_stats=False):
     """
@@ -98,6 +98,7 @@ def get_accuracy(model, data, labels, class_stats=False):
 
     return percent_correct
 
+
 def evaluate(generators, batch_size, input_size, true_data, classifier_path):
     """ Evaluates a generator by testing a trained classifier on true and generated data
 
@@ -128,6 +129,7 @@ def evaluate(generators, batch_size, input_size, true_data, classifier_path):
     generated_correct = get_accuracy(classifier, generated_x, generated_y.type(torch.int16), class_stats=True)
 
     return true_correct, generated_correct
+
 
 def train_model(model, optimizer, criterion, train_x, train_y, epoch, batch_size, show_loss=False):
     """
@@ -171,6 +173,7 @@ def train_model(model, optimizer, criterion, train_x, train_y, epoch, batch_size
         if show_loss and (e % 5 == 0):
             print(f"Epoch {e+5}\n")
     return epoch_loss, epoch_acc
+
 
 def optimize_hyperparameters(validation_x, validation_y, count):
     """
@@ -237,6 +240,7 @@ def optimize_hyperparameters(validation_x, validation_y, count):
     # print out optimal hyperparameters
     print(f"Optimized hyperparameters:\n{best_hp}\n")
     return best_hp
+
 
 def train_classifier(generators, batch_size, input_size):
     """

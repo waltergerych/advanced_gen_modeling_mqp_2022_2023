@@ -1,25 +1,24 @@
-import sys
-import torch
+# Native libraries
+import csv
+import os
+
+# Internal libraries
+import utils
+
+# External libraries
+import joblib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import torch.nn as nn
-import torch.nn.functional as F
-import joblib
 import seaborn as sns
-
-from sklearn.decomposition import PCA
+import torch
 from scipy.special import rel_entr
-from utils import *
-import csv
-
+from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 
-
+# Global variables
 TITLE_FONT_SIZE = 15
 HEATMAP_ALPHA = 0.4
 CLASSIFIER_DATA_PATH = "classifier_data"
@@ -193,6 +192,7 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, ov
 
         plt.show()
 
+
 def graph_two_features(real, fake, noise=None):
     """ Graphs real and fake data with only two features
 
@@ -217,7 +217,7 @@ def graph_two_features(real, fake, noise=None):
     df = pd.DataFrame(data=data, columns=['X1', 'X2'])
 
     # visualize the 2D
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     ax.set_facecolor('white')
     scatter = plt.scatter(df['X1'], df['X2'], c=labels, alpha=.8, marker='.')
     plt.legend(handles=scatter.legend_elements()[0], labels=label_names)
@@ -225,6 +225,7 @@ def graph_two_features(real, fake, noise=None):
     plt.ylabel("X2")
     plt.title("Real and Fake Data")
     # plt.show()
+
 
 def make_histograms(data, num_features):
     """ Make a histogram for every feature in the provided data set and save in a folder
@@ -247,6 +248,7 @@ def make_histograms(data, num_features):
         plt.show()
         # plt.savefig(f'./histograms/fake/{col}.png')
 
+
 def calculate_kl(real, model, diffusion, num_to_gen):
     """Calculates the kl divergence between fake data and the real data
 
@@ -258,9 +260,10 @@ def calculate_kl(real, model, diffusion, num_to_gen):
     Returns:
         kl_divergence (float)
     """
-    fake = get_model_output(model, real.shape[1], diffusion, num_to_gen)
+    fake = utils.get_model_output(model, real.shape[1], diffusion, num_to_gen)
 
     return sum(rel_entr(fake, real))
+
 
 def score(labels, pred):
     """Calculates accuracy, recall, precision, and f1 based on true labels and predicted labels
@@ -285,6 +288,7 @@ def score(labels, pred):
 
     return accuracy, precision, recall, f1
 
+
 def downsample(data, labels, target_index, classes):
     """Downsamples data so one class is half the data set
 
@@ -298,11 +302,12 @@ def downsample(data, labels, target_index, classes):
         new_data (torch.Tensor): the balanced data set
         new_labels (torch.Tensor): the labels for the new data, where 1 is the target class and 0 is all other classes
     """
-    target, _ = get_activity_data(data, labels, target_index)
+    target, _ = utils.get_activity_data(data, labels, target_index)
     remaining = []
+
     for i in range(len(classes)):
         if i is not target_index:
-            remaining.append(get_activity_data(data, labels, i)[0])
+            remaining.append(utils.get_activity_data(data, labels, i)[0])
     remaining = torch.cat(remaining)
 
     idx = torch.randperm(remaining.shape[0])
@@ -313,6 +318,7 @@ def downsample(data, labels, target_index, classes):
     new_labels = torch.cat([torch.ones(target.shape[0]), torch.zeros(sample.shape[0])])
 
     return new_data, new_labels
+
 
 def build_binary_classifier(data, labels, classes, class_index):
     """Builds a random forest classifier to decide whether or not data belongs to the specified class
@@ -335,6 +341,7 @@ def build_binary_classifier(data, labels, classes, class_index):
 
     return model
 
+
 def load_binary_classifier(path):
     """Loads a classifier from the specified path
 
@@ -344,7 +351,8 @@ def load_binary_classifier(path):
     model = joblib.load(path)
     return model
 
-def test_binary_classifier(classifier, data, labels, classes, class_index, print_results=False):
+
+def test_binary_classifier(classifier, data, labels, class_index, print_results=False):
     """Runs machine evaluation using a binary classifier to decide whether data belongs to the specified class
 
     Args:
@@ -374,6 +382,7 @@ def test_binary_classifier(classifier, data, labels, classes, class_index, print
 
     return accuracy, precision, recall, f1
 
+
 def build_multiclass_classifier(data, labels):
     """Builds a mulitclass classifier to predict whether data is one of:
             WALKING
@@ -392,6 +401,7 @@ def build_multiclass_classifier(data, labels):
 
     return model
 
+
 def test_multiclass_classifier(model, data, labels):
     """Tests a multiclass classifier to predict the class data
 
@@ -409,6 +419,7 @@ def test_multiclass_classifier(model, data, labels):
     data = data.detach().numpy()
     pred = model.predict(data)
     print(classification_report(labels, pred, digits=3))
+
 
 def separability(real, fake, train_test_ratio, printStats=True):
     """Determines how separable real and fake data are from each other with a binary classifier
@@ -432,7 +443,7 @@ def separability(real, fake, train_test_ratio, printStats=True):
     num_fits = 3
 
     # Fit three models and take average
-    for i in range(num_fits):
+    for _ in range(num_fits):
         train_x, test_x, train_y, test_y = train_test_split(data.detach().numpy(), labels.detach().numpy(), test_size=train_test_ratio)
 
         model = RandomForestClassifier(max_depth=10)
@@ -461,6 +472,7 @@ def separability(real, fake, train_test_ratio, printStats=True):
         print(f'F1:\t\t{f1}')
 
     return accuracy, precision, recall, f1
+
 
 def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_train_ratio, num_steps):
     """Evaluates data on binary classifiers and saves to csv
@@ -521,7 +533,7 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
 
         # Train on real, test on real
         print('Evaluating on real data')
-        acc, precision, recall, f1 = test_binary_classifier(classifier, real_test_x, real_test_y, classes, i)
+        acc, precision, recall, f1 = test_binary_classifier(classifier, real_test_x, real_test_y, i)
         csv_data["real"]["real"]["acc"].append(acc)
         csv_data["real"]["real"]["precision"].append(precision)
         csv_data["real"]["real"]["recall"].append(recall)
@@ -529,7 +541,7 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
 
         # Train on real, test on fake
         print('Evaluating on fake data')
-        acc, precision, recall, f1 = test_binary_classifier(classifier, fake_test_x, fake_test_y, classes, i)
+        acc, precision, recall, f1 = test_binary_classifier(classifier, fake_test_x, fake_test_y, i)
         csv_data["real"]["fake"]["acc"].append(acc)
         csv_data["real"]["fake"]["precision"].append(precision)
         csv_data["real"]["fake"]["recall"].append(recall)
@@ -541,7 +553,7 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
 
         # Train on fake, test on real
         print('Evaluating on real data')
-        acc, precision, recall, f1 = test_binary_classifier(classifier, real_test_x, real_test_y, classes, i)
+        acc, precision, recall, f1 = test_binary_classifier(classifier, real_test_x, real_test_y, i)
         csv_data["fake"]["real"]["acc"].append(acc)
         csv_data["fake"]["real"]["precision"].append(precision)
         csv_data["fake"]["real"]["recall"].append(recall)
@@ -549,7 +561,7 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
 
         # Train on fake, test on fake
         print('Evaluating on fake data')
-        acc, precision, recall, f1 = test_binary_classifier(classifier, fake_test_x, fake_test_y, classes, i)
+        acc, precision, recall, f1 = test_binary_classifier(classifier, fake_test_x, fake_test_y, i)
         csv_data["fake"]["fake"]["acc"].append(acc)
         csv_data["fake"]["fake"]["precision"].append(precision)
         csv_data["fake"]["fake"]["recall"].append(recall)
@@ -571,7 +583,6 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
                     for i in range(len(classes)):
                         csv_row.append(csv_data[train][test][metric][i])
                     csv_writer.writerow(csv_row)
-
 
 
 def multiclass_machine_evaluation(dataset, labels, fake, fake_labels, test_train_ratio):

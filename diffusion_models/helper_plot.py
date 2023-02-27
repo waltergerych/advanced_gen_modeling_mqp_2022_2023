@@ -1,13 +1,14 @@
 # Helper functions for plotting.
 # Original Source: https://github.com/acids-ircam/diffusion_models
-
+# External libraries
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import torch
-from sklearn.mixture import GaussianMixture
 import torch.distributions as distribution
 from matplotlib.patches import Ellipse
+from sklearn.mixture import GaussianMixture
+
 
 def hdr_plot_style():
     plt.style.use('dark_background')
@@ -30,11 +31,9 @@ def hdr_plot_style():
     plt.rc('ytick', direction='out', color='white')
     plt.rc('patch', edgecolor='#E6E6E6')
 
-# define function that allows to generate a number of sub plots in a single line with the given titles
+
 def prep_plots(titles, fig_size, fig_num=1):
-    """
-    create a figure with the number of sub_plots given by the number of totles, and return all generated subplot axis
-    as a list
+    """Create a figure with the number of sub_plots given by the number of totles, and return all generated subplot axis as a list
     """
     # first close possibly existing old figures, if you dont' do this Juyter Lab will coplain after a while when it collects more than 20 existing ficgires for the same cell
     # plt.close(fig_num)
@@ -48,9 +47,9 @@ def prep_plots(titles, fig_size, fig_num=1):
         ax_list.append(ax)
     return ax_list
 
+
 def finalize_plots(axes_list, legend=True, fig_title=None):
-    """
-    adds grid and legend to all axes in the given list
+    """Adds grid and legend to all axes in the given list
     """
     if fig_title:
         fig = axes_list[0].figure
@@ -60,8 +59,10 @@ def finalize_plots(axes_list, legend=True, fig_title=None):
         if legend:
             ax.legend()
 
+
 def plot_patterns(P,D):
-    """ Plots the decision boundary of a single neuron with 2-dimensional inputs """
+    """Plots the decision boundary of a single neuron with 2-dimensional inputs
+    """
     hdr_plot_style()
     nPats = P.shape[1]
     nUnits = D.shape[0]
@@ -89,8 +90,10 @@ def plot_patterns(P,D):
     ax.grid(True)
     return fig
 
+
 def plot_boundary(W,iVal,style,fig):
-    """ Plots (bi-dimensionnal) input patterns """
+    """Plots (bi-dimensionnal) input patterns
+    """
     nUnits = W.shape[0]
     colors = plt.cm.inferno_r.colors[1::3]
     xLims = plt.gca().get_xlim()
@@ -102,10 +105,11 @@ def plot_boundary(W,iVal,style,fig):
         plt.plot(xLims,(-np.dot(W[i, 1], xLims) - W[i, 0]) / W[i, 2], linestyle=style, color=color, linewidth=1.5);
         fig.canvas.draw()
 
+
 def visualize_boundary_linear(X, y, model):
-# VISUALIZEBOUNDARYLINEAR plots a linear decision boundary learned by the SVM
-#   VISUALIZEBOUNDARYLINEAR(X, y, model) plots a linear decision boundary
-#   learned by the SVM and overlays the data on it
+    """VISUALIZEBOUNDARYLINEAR plots a linear decision boundary learned by the SVM
+    VISUALIZEBOUNDARYLINEAR(X, y, model) plots a linear decision boundary learned by the SVM and overlays the data on it
+    """
     hdr_plot_style()
     w = model["w"]
     b = model["b"]
@@ -119,12 +123,13 @@ def visualize_boundary_linear(X, y, model):
     plt.plot(xp, yp, '-b')
     plt.scatter(model["X"][:, 0], model["X"][:, 1], marker='o', linewidths=4, s=40, c=None, edgecolors=[0.1, 0.1, 0.1])
 
+
 def plot_data(X, y):
-    #PLOTDATA Plots the data points X and y into a new figure
-    #   PLOTDATA(x,y) plots the data points with + for the positive examples
-    #   and o for the negative examples. X is assumed to be a Mx2 matrix.
-    #
-    # Note: This was slightly modified such that it expects y = 1 or y = 0
+    """PLOTDATA Plots the data points X and y into a new figure
+    PLOTDATA(x,y) plots the data points with + for the positive examples and o for the negative examples. X is assumed to be a Mx2 matrix.
+
+    Note: This was slightly modified such that it expects y = 1 or y = 0
+    """
     hdr_plot_style()
     # Find Indices of Positive and Negative Examples
     pos = (y == 1)[:, 0]
@@ -135,10 +140,11 @@ def plot_data(X, y):
     plt.scatter(X[neg, 0], X[neg, 1], marker='o', edgecolor='k', linewidths=2, s=50, c=[1, 0, 0])
     return fig
 
+
 def visualize_boundary(X, y, model):
-    #VISUALIZEBOUNDARY plots a non-linear decision boundary learned by the SVM
-    #   VISUALIZEBOUNDARYLINEAR(X, y, model) plots a non-linear decision
-    #   boundary learned by the SVM and overlays the data on it
+    """VISUALIZEBOUNDARY plots a non-linear decision boundary learned by the SVM
+    VISUALIZEBOUNDARYLINEAR(X, y, model) plots a non-linear decision boundary learned by the SVM and overlays the data on it
+    """
     hdr_plot_style()
     # Plot the training data on top of the boundary
     plot_data(X, y)
@@ -155,8 +161,10 @@ def visualize_boundary(X, y, model):
     # Plot the support vectors
     plt.scatter(model["X"][:, 0], model["X"][:, 1], marker='o', linewidths=4, s=10, c=[0.1, 0.1, 0.1])
 
+
 def plot_svc_decision_function(model, ax=None, plot_support=True):
-    """Plot the decision function for a 2D SVC"""
+    """Plot the decision function for a 2D SVC
+    """
     if ax is None:
         ax = plt.gca()
     xlim = ax.get_xlim()
@@ -246,7 +254,7 @@ def plot_gaussian_ellipsoid(m, C, sdwidth=1, npts=None, axh=None, color='r'):
         raise Exception('Unsupported dimensionality');
     return h
 
-#-----------------------------
+
 def show2d(means, C, sdwidth, npts=None, axh=None, color='r'):
     if (npts is None):
         npts = 50
@@ -261,7 +269,7 @@ def show2d(means, C, sdwidth, npts=None, axh=None, color='r'):
     h = axh.plot(bp[:, 0], bp[:, 1], ls='-', color=color)
     return h
 
-#-----------------------------
+
 def show3d(means, C, sdwidth, npts=None, axh=None):
     if (npts is None):
         npts = 20
@@ -279,6 +287,7 @@ def show3d(means, C, sdwidth, npts=None, axh=None):
     zp = np.reshape(bp[2,:], np.size(z));
     h = axh.surf(xp, yp, zp);
     return h
+
 
 def fit_multivariate_gaussian(X_s):
     gmm = GaussianMixture(n_components=1).fit(X_s)
@@ -298,6 +307,7 @@ def fit_multivariate_gaussian(X_s):
     cset = ax.contourf(X, Y, Z, cmap='magma')
     plt.scatter(X_s[:, 0], X_s[:, 1], c='b', s=60, edgecolor='w', zorder=2.5); plt.grid(True);
     return labels
+
 
 def fit_gaussian_mixture(X_s):
     gmm = GaussianMixture(n_components=4).fit(X_s)
@@ -320,6 +330,7 @@ def fit_gaussian_mixture(X_s):
     plt.scatter(X_s[:, 0], X_s[:, 1], c='b', s=60, edgecolor='w', zorder=2.5); plt.grid(True);
     return labels
 
+
 def draw_ellipse(position, covariance, ax=None, **kwargs):
     """Draw an ellipse with a given position and covariance"""
     ax = ax or plt.gca()
@@ -337,6 +348,7 @@ def draw_ellipse(position, covariance, ax=None, **kwargs):
     for nsig in range(1, 4):
         ax.add_patch(Ellipse(position, nsig * width, nsig * height,
                              angle, **kwargs))
+
 
 def plot_gmm(gmm, X, label=True, ax=None):
     plt.figure(figsize=(10,8))
