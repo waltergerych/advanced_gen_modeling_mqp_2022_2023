@@ -1,3 +1,6 @@
+# Internal libraries
+import utils
+
 # External libraries
 import numpy as np
 import torch
@@ -5,10 +8,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from utils import *
 
 class Generator(nn.Module):
-    """Class for generating fake HAR data"""
+    """Class for generating fake HAR data
+    """
+
 
     def __init__(self, input_size, hidden_size, output_size):
         """Class constructor for generator.
@@ -44,7 +48,9 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    """Class for discriminating data as real/fake"""
+    """Class for discriminating data as real/fake
+    """
+
 
     def __init__(self, input_size, hidden_size):
         """Class constructor for discriminator.
@@ -147,6 +153,7 @@ def train_model(generator, discriminator, generator_optimizer, discriminator_opt
                 discriminator.eval()
                 generator.train()
 
+
 def generate_data(generators, batch_size, input_size):
     """ Generates data using the given generators
 
@@ -169,6 +176,7 @@ def generate_data(generators, batch_size, input_size):
     generated_x, generated_y = torch.cat(generated_data_x), torch.cat(generated_data_y)
 
     return generated_x, generated_y
+
 
 def make_gans(train_x, train_y, classes):
     """Builds and trains gans for each of the six HAR classes
@@ -211,7 +219,7 @@ def make_gans(train_x, train_y, classes):
         criterion = nn.BCELoss()
 
         # retrieve data for specified class
-        x, y = get_activity_data(train_x, train_y, i)
+        x, y = utils.get_activity_data(train_x, train_y, i)
 
         # train the models
         print(f'Training {classes[i]} GAN')

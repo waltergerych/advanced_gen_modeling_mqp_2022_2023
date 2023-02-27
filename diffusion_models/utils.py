@@ -1,25 +1,28 @@
 # Loss Function for Diffusion Model
 # Original Source: https://github.com/acids-ircam/diffusion_models
-
 # Native libraries
 import os
+
 # External libraries
 import numpy as np
 import torch
 import pandas as pd
-from random import choices
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
+
 def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2):
-    if schedule == 'linear':
-        betas = torch.linspace(start, end, n_timesteps)
-    elif schedule == "quad":
+    if schedule == "quad":
         betas = torch.linspace(start ** 0.5, end ** 0.5, n_timesteps) ** 2
     elif schedule == "sigmoid":
         betas = torch.linspace(-6, 6, n_timesteps)
         betas = torch.sigmoid(betas) * (end - start) + start
+    else:
+        # default linear beta schedule
+        betas = torch.linspace(start, end, n_timesteps)
+
     return betas
+
 
 def extract(input, t, x):
     """Extracts a single value from input at step t and reshapes using x.
@@ -35,9 +38,11 @@ def extract(input, t, x):
     reshape = [t.shape[0]] + [1] * (len(shape) - 1)
     return out.reshape(*reshape)
 
+
 def log_1_min_a(a):
     """Used for calculating categorical noise variables"""
     return torch.log(1 - a.exp() + 1e-40)
+
 
 def q_posterior_mean_variance(x_0, x_t, t,posterior_mean_coef_1,posterior_mean_coef_2,posterior_log_variance_clipped):
     coef_1 = extract(posterior_mean_coef_1, t, x_0)
@@ -46,6 +51,7 @@ def q_posterior_mean_variance(x_0, x_t, t,posterior_mean_coef_1,posterior_mean_c
     var = extract(posterior_log_variance_clipped, t, x_0)
     return mean, var
 
+
 def p_mean_variance(model, x, t):
     # Go through model
     out = model(x, t)
@@ -53,6 +59,7 @@ def p_mean_variance(model, x, t):
     mean, log_var = torch.split(out, 2, dim=-1)
     var = torch.exp(log_var)
     return mean, log_var
+
 
 def p_sample(model, x, t,alphas,betas,one_minus_alphas_bar_sqrt):
     t = torch.tensor([t])
@@ -69,6 +76,7 @@ def p_sample(model, x, t,alphas,betas,one_minus_alphas_bar_sqrt):
     sample = mean + sigma_t * z
     return (sample)
 
+
 def p_sample_loop(model, shape,n_steps,alphas,betas,one_minus_alphas_bar_sqrt):
     """Removes noise from data one step at a time and appends each step into a list"""
     cur_x = torch.randn(shape)
@@ -78,8 +86,10 @@ def p_sample_loop(model, shape,n_steps,alphas,betas,one_minus_alphas_bar_sqrt):
         x_seq.append(cur_x)
     return x_seq
 
+
 def approx_standard_normal_cdf(x):
     return 0.5 * (1.0 + torch.tanh(torch.tensor(np.sqrt(2.0 / np.pi)) * (x + 0.044715 * torch.pow(x, 3))))
+
 
 def discretized_gaussian_log_likelihood(x, means, log_scales):
     # Assumes data is integers [0, 255] rescaled to [-1, 1]
@@ -95,10 +105,12 @@ def discretized_gaussian_log_likelihood(x, means, log_scales):
     log_probs = torch.where(x < -0.999, log_cdf_plus, torch.where(x > 0.999, log_one_minus_cdf_min, torch.log(torch.clamp(cdf_delta, min=1e-12))))
     return log_probs
 
+
 def normal_kl(mean1, logvar1, mean2, logvar2):
     """Calculates KL divergence for loss function"""
     kl = 0.5 * (-1.0 + logvar2 - logvar1 + torch.exp(logvar1 - logvar2) + ((mean1 - mean2) ** 2) * torch.exp(-logvar2))
     return kl
+
 
 def q_sample(x_0, t, alphas_bar_sqrt, one_minus_alphas_bar_sqrt ,noise=None):
     """Samples q(t)"""
@@ -107,6 +119,7 @@ def q_sample(x_0, t, alphas_bar_sqrt, one_minus_alphas_bar_sqrt ,noise=None):
     alphas_t = extract(alphas_bar_sqrt, t, x_0)
     alphas_1_m_t = extract(one_minus_alphas_bar_sqrt, t, x_0)
     return (alphas_t * x_0 + alphas_1_m_t * noise)
+
 
 def loss_variational(model, x_0,alphas_bar_sqrt, one_minus_alphas_bar_sqrt,posterior_mean_coef_1,posterior_mean_coef_2,posterior_log_variance_clipped,n_steps):
     batch_size = x_0.shape[0]
@@ -129,6 +142,7 @@ def loss_variational(model, x_0,alphas_bar_sqrt, one_minus_alphas_bar_sqrt,poste
     output = torch.where(t == 0, decoder_nll, kl)
     return output.mean(-1)
 
+
 def noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, n_steps):
     batch_size = x_0.shape[0]
     # Select a random step for each example
@@ -147,6 +161,7 @@ def noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_b
     x = x_0 * a + e * am1
     output, _ = model(x, c, t, feature_indices)
     return (e - output).square().mean()
+
 
 def q_x_cat(x_0, diffs, t, k):
     """Function to add t time steps of noise to discrete data x
@@ -168,6 +183,7 @@ def q_x_cat(x_0, diffs, t, k):
     x_t = resample(x_t_probs)
 
     return torch.nn.functional.one_hot(x_t, k)
+
 
 def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k, feature_indices):
     """Calculates the loss in estimating the noise of x_t
@@ -199,7 +215,7 @@ def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k,
 
     # Get x_t for each time step in batch
     batch_x_list = []
-    for i, index in enumerate(feature_indices):
+    for index in feature_indices:
         feature = x_0[:, index[0]:index[1]]
         k_x = index[1] - index[0]
         batch_feature = q_x_cat(feature, diffs, t, k_x)
@@ -233,14 +249,17 @@ def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k,
 
     return (theta - output).square().mean()
 
+
 def extract_cat(a, t, x_shape):
     b, *_ = t.shape
     out = a.gather(-1, t)
     return out.reshape(b, *((1,) * (len(x_shape) - 1)))
 
+
 def log_add_exp(a, b):
     maximum = torch.max(a, b)
     return maximum + torch.log(torch.exp(a - maximum) + torch.exp(b - maximum))
+
 
 def resample2(distribution, n):
     """Resamples from a distribution n times
@@ -259,6 +278,7 @@ def resample2(distribution, n):
     samples_tensor = torch.stack(samples)
     return samples_tensor
 
+
 def resample(distribution):
     """Resamples from a probability distribution
 
@@ -266,6 +286,7 @@ def resample(distribution):
         distribution (torch.Tensor): 2D tensor with second dimension with the probabilties
     """
     return torch.multinomial(distribution, num_samples=1, replacement=True).squeeze(dim=1)
+
 
 def get_probs(data):
     """Calculate probablity distribution for given data with K classes
@@ -281,6 +302,7 @@ def get_probs(data):
     totals = sums.sum(dim=0).unsqueeze(dim=-1)
     return (sums / totals)
 
+
 def get_classes(data):
     """Finds all the classes in the data
 
@@ -293,10 +315,12 @@ def get_classes(data):
     """
     return data.unique(return_counts=True)[0]
 
+
 def normalize(probs):
     """Normalizes distribution to add up to one"""
     sum = torch.sum(probs)
     return probs / sum
+
 
 def to_one_hot(data, k, feature_indices):
     """Makes one hot encoding of data with k classes"""
@@ -307,6 +331,7 @@ def to_one_hot(data, k, feature_indices):
         one_hot_list.append(torch.nn.functional.one_hot(feature.long(), end - start))
     one_hot = torch.cat(one_hot_list, dim=1)
     return one_hot
+
 
 def get_model_output(model, input_size, diffusion, num_to_gen):
     """Gets the output of the model
@@ -348,7 +373,7 @@ def p_tabular_sample_loop(model, e, shape, feature_indices, n_steps, alphas, bet
     return x_seq[-1]
 
 def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous):
-    """Gets just the discrete output from a model
+    """Gets the output of a discrete model
     
     Returns:
         continuous_output (torch.Tensor): the generated data
@@ -442,6 +467,7 @@ def get_activity_data(x, y, activity_label):
 
     return data_x, data_y
 
+
 def read_user_data(uid):
     """Reads a user data from the ExtraSensory dataset given a user ID
 
@@ -460,6 +486,7 @@ def read_user_data(uid):
     feature_names = df.iloc[:, 0:226]
     labels = df.iloc[:, 226:]
     return df, feature_names, labels
+
 
 def separate_tabular_data(data, features):
     """Retrieves the discrete and continuous features from a dataset
@@ -484,6 +511,7 @@ def separate_tabular_data(data, features):
     continuous = torch.index_select(data, 1, torch.tensor(continuous_indices))
 
     return continuous, discrete
+
 
 def get_condition(discrete):
     """Gets a random categorical variable and samples from that distribution

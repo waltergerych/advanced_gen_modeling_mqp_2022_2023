@@ -1,22 +1,25 @@
 # Code from https://github.com/azad-academy/denoising-diffusion-model/blob/main/diffusion_model_demo.ipynb
+# Internal libraries
+import utils
+import evaluate as eval
+from ema import EMA
+from model import ConditionalModel, ConditionalMultinomialModel
 
+# External libraries
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.datasets import make_checkerboard,make_circles,make_moons,make_s_curve,make_swiss_roll
-from helper_plot import hdr_plot_style
+import pandas as pd
+import seaborn as sns
 import torch
 import torch.optim as optim
-from utils import *
-from sklearn.preprocessing import OneHotEncoder
+from torch.nn.utils import clip_grad
 
-from model import ConditionalModel
-from model import ConditionalMultinomialModel
-from ema import EMA
-from evaluate import *
-from classifier import *
-import seaborn as sns
 
 class Diffusion():
+    """Diffusion model class
+    """
+
+
     def __init__(self, num_steps):
         """
         Class constructor for feed-forward model.
@@ -30,7 +33,7 @@ class Diffusion():
         self.num_steps = num_steps
         # For continuous noise
         # Beta scheduler
-        self.betas = make_beta_schedule(schedule='linear', n_timesteps=num_steps, start=1e-5, end=0.5e-2)
+        self.betas = utils.make_beta_schedule(schedule='linear', n_timesteps=num_steps, start=1e-5, end=0.5e-2)
         # Alphas
         self.alphas = 1 - self.betas
         # Cumulative product of alphas
@@ -44,11 +47,12 @@ class Diffusion():
         # Log of alphas
         self.log_alphas = np.log(self.alphas)
         # One minus log of alphas
-        self.one_minus_log_alphas = log_1_min_a(self.log_alphas)
+        self.one_minus_log_alphas = utils.log_1_min_a(self.log_alphas)
         # Cumulative sum of log of alphas
         self.log_cumprod_alpha = np.cumsum(self.log_alphas)
         # One minus log of cumulative sum
-        self.log_1_min_cumprod_alpha = log_1_min_a(self.log_cumprod_alpha)
+        self.log_1_min_cumprod_alpha = utils.log_1_min_a(self.log_cumprod_alpha)
+
 
 def get_denoising_variables(num_steps):
     """Calculates the variables used in the denoising process and captures them in the class 'Diffusion"
@@ -63,7 +67,7 @@ def get_denoising_variables(num_steps):
 
     return diffusion
 
-# Add t time steps of noise to the data x
+
 def q_x(x_0, t, model, noise=None):
     """Function to add t time steps of noise to continuous data x
 
@@ -78,9 +82,10 @@ def q_x(x_0, t, model, noise=None):
     """
     if noise is None:
         noise = torch.randn_like(x_0)
-    alphas_t = extract(model.alphas_bar_sqrt, t, x_0)
-    alphas_1_m_t = extract(model.one_minus_alphas_bar_sqrt, t, x_0)
+    alphas_t = utils.extract(model.alphas_bar_sqrt, t, x_0)
+    alphas_1_m_t = utils.extract(model.one_minus_alphas_bar_sqrt, t, x_0)
     return (alphas_t * x_0 + alphas_1_m_t * noise)
+
 
 def visualize_forward(dataset, num_steps, num_divs, diffusion):
     """Vizualizes the forward diffusion process
@@ -91,17 +96,18 @@ def visualize_forward(dataset, num_steps, num_divs, diffusion):
         num_divs (int): number of graphs to plot
         diffusion (class: Diffusion): a diffusion class which captures forward diffusion variables
     """
-    fig, axs = plt.subplots(1, num_divs + 1, figsize=(28, 3))
+    _, axs = plt.subplots(1, num_divs + 1, figsize=(28, 3))
     axs[0].scatter(dataset[:, 0], dataset[:, 1],color='white',edgecolor='gray', s=5)
     axs[0].set_axis_off()
     axs[0].set_title('$q(\mathbf{x}_{'+str(0)+'})$')
     for i in range(1, num_divs + 1):
         # q_i = q_x(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion)
-        q_i = q_x_cat(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion, torch.tensor([2]))
+        q_i = utils.q_x_cat(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion, torch.tensor([2]))
         axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
         axs[i].set_axis_off()
         axs[i].set_title('$q(\mathbf{x}_{'+str(i*int(num_steps/num_divs))+'})$')
     plt.show()
+
 
 def visualize_backward(model, dataset, num_steps, num_divs, diffusion, heatmap=False, reverse=False):
     """Vizualizes the backwards diffusion process
@@ -114,8 +120,8 @@ def visualize_backward(model, dataset, num_steps, num_divs, diffusion, heatmap=F
         diffusion (class: Diffusion): a diffusion class which captures forward diffusion variables
         reverse (bool): If true, will plot the graphs in reverse
     """
-    x_seq = p_sample_loop(model, dataset.shape,num_steps,diffusion.alphas,diffusion.betas,diffusion.one_minus_alphas_bar_sqrt)
-    fig, axs = plt.subplots(2, num_divs+1, figsize=(28, 6))
+    x_seq = utils.p_sample_loop(model, dataset.shape,num_steps,diffusion.alphas,diffusion.betas,diffusion.one_minus_alphas_bar_sqrt)
+    _, axs = plt.subplots(2, num_divs+1, figsize=(28, 6))
     for i in range(num_divs + 1):
         cur_x = x_seq[i * int(num_steps/num_divs)].detach()
         axs[0, i if not reverse else num_divs-i].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
@@ -144,6 +150,7 @@ def forward_diffusion(dataset, num_steps, plot=False, num_divs=10):
 
     return diffusion
 
+
 def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
     """Applies reverse diffusion to a dataset
 
@@ -160,6 +167,7 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
         model (ConditionalModel): the trained model
     """
     # Load variables from diffusion class
+    loss = None
     num_steps = diffusion.num_steps
     betas = diffusion.betas
     alphas = diffusion.alphas
@@ -175,6 +183,7 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
         model = ConditionalModel(num_steps, dataset.size()[1])
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
     # Create EMA model
     ema = EMA(0.9)
     ema.register(model)
@@ -190,27 +199,29 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
             indices = permutation[i:i+batch_size]
             batch_x = dataset[indices]
             # Compute the loss
-            loss = noise_estimation_loss(model, batch_x,alphas_bar_sqrt,one_minus_alphas_bar_sqrt,num_steps)
+            loss = utils.noise_estimation_loss(model, batch_x, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()
             # Backward pass: compute gradient of the loss with respect to parameters
             loss.backward()
             # Perform gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
+            clip_grad.clip_grad_norm_(model.parameters(), 1.)
             # Calling the step function to update the parameters
             optimizer.step()
             # Update the exponential moving average
             ema.update(model)
         # Print loss
         if t % 1000 == 0:
-            fake = get_model_output(model, dataset.shape[1], diffusion, num_to_gen=1000)
-            _, _, _, f1 = separability(dataset, fake, train_test_ratio=.7, printStats=False)
-        print(f'Training Steps: {t}\tLoss: {round(loss.item(), 4)}\tF1: {round(f1, 4)}\r', end='')
+            fake = utils.get_model_output(model, dataset.shape[1], diffusion, num_to_gen=1000)
+            _, _, _, f1 = eval.separability(dataset, fake, train_test_ratio=.7, printStats=False)
+        if loss:
+            print(f'Training Steps: {t}\tLoss: {round(loss.item(), 4)}\tF1: {round(f1, 4)}\r', end='')
         t += 1
     if plot:
         plt.show()
 
     return model
+
 
 def use_model(model, dataset, diffusion, t):
     """Takes in a trained diffusion model and creates n datapoints from Gaussian noise
@@ -224,8 +235,9 @@ def use_model(model, dataset, diffusion, t):
     Returns:
         data (torch.Tensor): the generated data
     """
-    output = p_sample(model, dataset, t, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
+    output = utils.p_sample(model, dataset, t, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
     return output
+
 
 def reverse_categorical_diffusion(discrete, features, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
     """Applies reverse diffusion to a dataset
@@ -246,6 +258,7 @@ def reverse_categorical_diffusion(discrete, features, diffusion, k, feature_indi
         model (ConditionalModel): the trained model
     """
     # Load variables from diffusion class
+    loss = None
     num_steps = diffusion.num_steps
     betas = diffusion.betas
     alphas = diffusion.alphas
@@ -261,6 +274,7 @@ def reverse_categorical_diffusion(discrete, features, diffusion, k, feature_indi
         model = ConditionalMultinomialModel(num_steps, discrete.shape[1])
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
+
     # Create EMA model
     ema = EMA(0.9)
     ema.register(model)
@@ -275,31 +289,29 @@ def reverse_categorical_diffusion(discrete, features, diffusion, k, feature_indi
             indices_discrete = permutation_discrete[i:i+batch_size]
             batch_x_discrete = discrete[indices_discrete]
             # One hot encoding
-            batch_x_discrete = to_one_hot(batch_x_discrete, k, feature_indices)
+            batch_x_discrete = utils.to_one_hot(batch_x_discrete, k, feature_indices)
             # Compute the loss
-            loss = multinomial_diffusion_noise_estimation(model, batch_x_discrete, diffusion, k, feature_indices)
+            loss = utils.multinomial_diffusion_noise_estimation(model, batch_x_discrete, diffusion, k, feature_indices)
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()
             # Backward pass: compute gradient of the loss with respect to parameters
             loss.backward()
             # Perform gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
+            clip_grad.clip_grad_norm_(model.parameters(), 1.)
             # Calling the step function to update the parameters
             optimizer.step()
             # Update the exponential moving average
             ema.update(model)
         # Print loss
-        p = get_discrete_model_output(model, k, 1, feature_indices).squeeze(0)
+        p = utils.get_discrete_model_output(model, k, 1, feature_indices).squeeze(0)
         prob_list.append(p)
-        print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
-        loss_list.append(loss.item())
+        if loss:
+            print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
+            loss_list.append(loss.item())
 
     return model, loss_list, prob_list
 
-############################
-###  CODE TO WORK ON FOR ###
-###   TABULAR DIFFUSION  ###
-############################
+
 def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
     """Applies reverse diffusion to a dataset
 
@@ -319,6 +331,7 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
         model (ConditionalModel): the trained model
     """
     # Load variables from diffusion class
+    loss = None
     num_steps = diffusion.num_steps
     betas = diffusion.betas
     alphas = diffusion.alphas
@@ -351,26 +364,26 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
             batch_x_discrete = discrete[indices_discrete]
             batch_x_continuous = continuous[indices_continuous]
             # One hot encoding
-            batch_x_discrete = to_one_hot(batch_x_discrete, k, feature_indices)
+            batch_x_discrete = utils.to_one_hot(batch_x_discrete, k, feature_indices)
             # Compute the loss
-            # multinomial_loss = multinomial_diffusion_noise_estimation(model, batch_x_discrete, batch_x_continuous, diffusion, k, feature_indices)
-            continuous_loss = noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
-            # loss = multinomial_loss + continuous_loss
-            loss = continuous_loss
+            multinomial_loss = utils.multinomial_diffusion_noise_estimation(model, batch_x_discrete, batch_x_continuous, diffusion, k, feature_indices)
+            continuous_loss = utils.noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
+            loss = multinomial_loss + continuous_loss
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()
             # Backward pass: compute gradient of the loss with respect to parameters
             loss.backward()
             # Perform gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
+            clip_grad.clip_grad_norm_(model.parameters(), 1.)
             # Calling the step function to update the parameters
             optimizer.step()
             # Update the exponential moving average
             ema.update(model)
         # Print loss
-        _, p = get_discrete_model_output(model, k, 1000, feature_indices, continuous)
+        _, p = utils.get_discrete_model_output(model, k, 1000, feature_indices, continuous)
         prob_list.append(p.squeeze(0))
-        print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
-        loss_list.append(loss.item())
+        if loss:
+            print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
+            loss_list.append(loss.item())
 
     return model, loss_list, prob_list
