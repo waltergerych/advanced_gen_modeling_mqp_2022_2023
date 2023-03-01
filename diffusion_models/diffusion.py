@@ -368,7 +368,7 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
             # Compute the loss
             multinomial_loss = utils.multinomial_diffusion_noise_estimation(model, batch_x_discrete, batch_x_continuous, diffusion, k, feature_indices)
             continuous_loss = utils.noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
-            loss = multinomial_loss + continuous_loss
+            loss = multinomial_loss + 2 * continuous_loss
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()
             # Backward pass: compute gradient of the loss with respect to parameters
@@ -380,10 +380,10 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
             # Update the exponential moving average
             ema.update(model)
         # Print loss
-        _, p = utils.get_tabular_model_output(model, k, 1000, feature_indices, continuous, diffusion)
+        _, p = utils.get_tabular_model_output(model, k, 1000, feature_indices, continuous, diffusion, calculate_continuous=False)
         prob_list.append(p.squeeze(0))
         if loss:
-            print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
+            print(f'Training Steps: {t}\tContinuous Loss: {round(continuous_loss.item(), 8)}\tDiscrete Loss: {round(multinomial_loss.item(), 8)}', end='\n')
             loss_list.append(loss.item())
 
     return model, loss_list, prob_list

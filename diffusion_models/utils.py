@@ -213,7 +213,7 @@ def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k,
     t_1 = t - 1
     t_1[t_1 == -1] = 0
 
-    # Get x_t for each time step in batch
+    # Get x_t for each time step in feature
     batch_x_list = []
     for index in feature_indices:
         feature = x_0[:, index[0]:index[1]]
@@ -390,7 +390,7 @@ def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous)
 
     return continuous_output, discrete_output[0]
 
-def get_tabular_model_output(model, k, num_to_gen, feature_indices, continuous, diffusion):
+def get_tabular_model_output(model, k, num_to_gen, feature_indices, continuous, diffusion, calculate_continuous=False):
     """Gets the output of a tabular model
     
     Returns:
@@ -405,8 +405,9 @@ def get_tabular_model_output(model, k, num_to_gen, feature_indices, continuous, 
     g = torch.randn((num_to_gen, continuous.shape[1]))
     with torch.no_grad():
         _, discrete_output = model(g, e, t, feature_indices)
-        continuous_output = p_tabular_sample_loop(model, e, torch.Size([num_to_gen, continuous.shape[1]]), feature_indices, diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
-
+        continuous_output = 1
+        if(calculate_continuous):
+            continuous_output = p_tabular_sample_loop(model, e, torch.Size([num_to_gen, continuous.shape[1]]), feature_indices, diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
     return continuous_output, discrete_output[0]
 
 def load_data(dataset, dataset_type):

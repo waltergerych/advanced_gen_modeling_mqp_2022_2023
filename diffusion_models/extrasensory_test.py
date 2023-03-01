@@ -20,9 +20,9 @@ def main():
     data = torch.tensor(df.values)
 
     # Variables for diffusion
-    NUM_STEPS = 100         # Low for testing to speed up
-    NUM_REVERSE_STEPS = 1000
-    LEARNING_RATE = .0001
+    NUM_STEPS = 100             # Low for testing to speed up
+    NUM_REVERSE_STEPS = 100    # ~Epochs
+    LEARNING_RATE = .001
     BATCH_SIZE = 128
     HIDDEN_SIZE = 128
     diffusion = dfn.get_denoising_variables(NUM_STEPS)
@@ -43,9 +43,11 @@ def main():
     discrete = torch.stack(test_data, dim=1)
 
     test_cont_data = []
-    test_cont_data.append(torch.multiply(torch.randn(num_samples), torch.randn(num_samples)))
-    test_cont_data.append(torch.randn(num_samples) * .25 + 3)
+    test_cont_data.append(torch.distributions.Beta(2, 25).sample((num_samples,)))
+    test_cont_data.append(0 - torch.distributions.Beta(5, 1).sample((num_samples,)))
     continuous = torch.stack(test_cont_data, dim=1)
+    # plt.scatter(continuous[:, 0], continuous[:, 1])
+    # plt.show()
 
     feature_indices = []
     k = 0
@@ -60,7 +62,7 @@ def main():
     model, loss, probs = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, plot=False, model=model)
     torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
 
-    continuous_output, discrete_output = utils.get_tabular_model_output(model, k, 128, feature_indices, continuous, diffusion)
+    continuous_output, discrete_output = utils.get_tabular_model_output(model, k, num_samples, feature_indices, continuous, diffusion, calculate_continuous=True)
     print(discrete_output)
     eval.separability(continuous, continuous_output, train_test_ratio=.7)
 
@@ -75,7 +77,7 @@ def main():
     plt.legend(['f1/c1','f1/c2','f2/c1','f2/c2'])
     plt.show()
 
-    true_data_sample = continuous[:128, :]
+    true_data_sample = continuous[:, :]
     x1 = continuous_output[:, 0]
     y1 = continuous_output[:, 1]
     x2 = true_data_sample[:, 0]
