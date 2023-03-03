@@ -30,7 +30,7 @@ else:
     device = 'cpu'
 
 # Batch size during training
-batch_size = 200
+batch_size = 512
 
 
 # Number of channels in the training images. For color images this is 3
@@ -40,7 +40,7 @@ nc = 3
 ndf = 4
 
 # Number of training epochs
-num_epochs = 200
+num_epochs = 5
 
 # Learning rate for optimizers
 lr = 0.002
@@ -64,13 +64,15 @@ test_path = "diffusion_models/GAF_Classification/test"
 
 train_transforms = transforms.Compose([
     transforms.ToTensor(),
-    # transforms.Resize(32, interpolation=torchvision.transforms.functional.InterpolationMode.BILINEAR),
+    transforms.Resize(32, interpolation=torchvision.transforms.functional.InterpolationMode.BILINEAR),
+    transforms.CenterCrop(32),
     # transforms.RandomHorizontalFlip(p=0.5)
     ])
 
 test_transforms = transforms.Compose([
     transforms.ToTensor(),
-    # transforms.Resize(32, interpolation=torchvision.transforms.functional.InterpolationMode.BILINEAR)
+    transforms.Resize(32, interpolation=torchvision.transforms.functional.InterpolationMode.BILINEAR),
+    transforms.CenterCrop(32),
     ])
 
 train_loader = DataLoader(torchvision.datasets.ImageFolder(train_path, transform=train_transforms), batch_size=batch_size, shuffle=True)
@@ -141,15 +143,21 @@ optimizerD = optim.Adam(cnn.parameters(), lr=lr, betas=(beta1, 0.999))
 D_losses = []
 iters = 0
 
+# for i, (data_x, data_y) in enumerate(train_loader, 0):
+#     X = data_x.to(device)
+#     Y = data_y.to(device)
+#     print(X.shape)
+#     print(Y.shape)
+
 print("Starting Training Loop...")
 # For each epoch
 for epoch in range(num_epochs):
     # For each batch in the dataloader
     for i, (data_x, data_y) in enumerate(train_loader, 0):
         
+        
         X = data_x.to(device)
         Y = data_y.to(device)
-
 
         cnn.zero_grad()
         output = cnn(X)
