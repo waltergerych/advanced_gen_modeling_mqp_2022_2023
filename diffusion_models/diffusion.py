@@ -3,7 +3,7 @@
 import utils
 import evaluate as eval
 from ema import EMA
-from model import ConditionalModel, ConditionalMultinomialModel
+from model import ConditionalModel, ConditionalMultinomialModel, ConditionalTabularModel
 
 # External libraries
 import matplotlib.pyplot as plt
@@ -344,7 +344,8 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
 
     # If no model given, create new one
     if model == None:
-        model = ConditionalMultinomialModel(num_steps, discrete.shape[1])
+        hidden_size = 128
+        model = ConditionalTabularModel(num_steps, hidden_size, continuous.shape[1], k)
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
     # Create EMA model
@@ -355,6 +356,7 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
     loss_list, prob_list = [], []
 
     for t in range(training_time_steps):
+        multinomial_loss, continuous_loss = None, None
         permutation_discrete = torch.randperm(discrete.shape[0])
         permutation_continuous = torch.randperm(continuous.shape[0])
         for i in range(0, discrete.shape[0], batch_size):
@@ -382,7 +384,7 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
         # Print loss
         _, p = utils.get_tabular_model_output(model, k, 1000, feature_indices, continuous, diffusion, calculate_continuous=False)
         prob_list.append(p.squeeze(0))
-        if loss:
+        if loss and multinomial_loss and continuous_loss:
             print(f'Training Steps: {t}\tContinuous Loss: {round(continuous_loss.item(), 8)}\tDiscrete Loss: {round(multinomial_loss.item(), 8)}', end='\n')
             loss_list.append(loss.item())
 

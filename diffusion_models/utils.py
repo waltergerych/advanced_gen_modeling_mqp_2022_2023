@@ -348,6 +348,7 @@ def get_model_output(model, input_size, diffusion, num_to_gen):
 
     return output
 
+
 def p_tabular_sample(model, x, e, t, feature_indices, alphas, betas, one_minus_alphas_bar_sqrt):
     t = torch.tensor([t])
     # Factor to the model output
@@ -363,6 +364,7 @@ def p_tabular_sample(model, x, e, t, feature_indices, alphas, betas, one_minus_a
     sample = mean + sigma_t * z
     return (sample)
 
+
 def p_tabular_sample_loop(model, e, shape, feature_indices, n_steps, alphas, betas, one_minus_alphas_bar_sqrt):
     """Removes noise from data one step at a time and appends each step into a list"""
     cur_x = torch.randn(shape)
@@ -372,9 +374,10 @@ def p_tabular_sample_loop(model, e, shape, feature_indices, n_steps, alphas, bet
         x_seq.append(cur_x)
     return x_seq[-1]
 
+
 def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous):
     """Gets the output of a discrete model
-    
+
     Returns:
         continuous_output (torch.Tensor): the generated data
         discrete_output (torch.Tensor): a probability tensor of size n*k
@@ -390,9 +393,10 @@ def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous)
 
     return continuous_output, discrete_output[0]
 
+
 def get_tabular_model_output(model, k, num_to_gen, feature_indices, continuous, diffusion, calculate_continuous=False):
     """Gets the output of a tabular model
-    
+
     Returns:
         continuous_output (torch.Tensor): the generated data
         discrete_output (torch.Tensor): a probability tensor of size n*k
@@ -409,6 +413,7 @@ def get_tabular_model_output(model, k, num_to_gen, feature_indices, continuous, 
         if(calculate_continuous):
             continuous_output = p_tabular_sample_loop(model, e, torch.Size([num_to_gen, continuous.shape[1]]), feature_indices, diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
     return continuous_output, discrete_output[0]
+
 
 def load_data(dataset, dataset_type):
     """Load data from text file
