@@ -99,13 +99,13 @@ def visualize_forward(dataset, num_steps, num_divs, diffusion):
     _, axs = plt.subplots(1, num_divs + 1, figsize=(28, 3))
     axs[0].scatter(dataset[:, 0], dataset[:, 1],color='white',edgecolor='gray', s=5)
     axs[0].set_axis_off()
-    axs[0].set_title('$q(\mathbf{x}_{'+str(0)+'})$')
+    axs[0].set_title('$q(\\mathbf{x}_{'+str(0)+'})$')
     for i in range(1, num_divs + 1):
         # q_i = q_x(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion)
         q_i = utils.q_x_cat(dataset, torch.tensor([i * int(num_steps/num_divs) - 1]), diffusion, torch.tensor([2]))
         axs[i].scatter(q_i[:, 0], q_i[:, 1],color='white',edgecolor='gray', s=5)
         axs[i].set_axis_off()
-        axs[i].set_title('$q(\mathbf{x}_{'+str(i*int(num_steps/num_divs))+'})$')
+        axs[i].set_title('$q(\\mathbf{x}_{'+str(i*int(num_steps/num_divs))+'})$')
     plt.show()
 
 
@@ -126,7 +126,7 @@ def visualize_backward(model, dataset, num_steps, num_divs, diffusion, heatmap=F
         cur_x = x_seq[i * int(num_steps/num_divs)].detach()
         axs[0, i if not reverse else num_divs-i].scatter(cur_x[:, 0], cur_x[:, 1],color='white',edgecolor='gray', s=5)
         axs[0, i if not reverse else num_divs-i].set_axis_off()
-        axs[0, i if not reverse else num_divs-i].set_title('$q(\mathbf{x}_{'+str(int((num_divs-i)*(num_steps)/num_divs))+'})$')
+        axs[0, i if not reverse else num_divs-i].set_title('$q(\\mathbf{x}_{'+str(int((num_divs-i)*(num_steps)/num_divs))+'})$')
 
         if heatmap:
             cur_df = pd.DataFrame(cur_x)

@@ -43,8 +43,8 @@ def main():
     discrete = torch.stack(test_data, dim=1)
 
     test_cont_data = []
-    test_cont_data.append(torch.distributions.Beta(2, 25).sample((num_samples,)))
-    test_cont_data.append(0 - torch.distributions.Beta(5, 1).sample((num_samples,)))
+    test_cont_data.append(torch.distributions.Beta(2, 25).sample(sample_shape=torch.Size([num_samples])))
+    test_cont_data.append(0 - torch.distributions.Beta(5, 1).sample(sample_shape=torch.Size([num_samples])))
     continuous = torch.stack(test_cont_data, dim=1)
     # plt.scatter(continuous[:, 0], continuous[:, 1])
     # plt.show()
@@ -59,7 +59,7 @@ def main():
     # Declare model
     model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
     # model.load_state_dict(torch.load(f'./models/tabular_{NUM_STEPS}.pth'))
-    model, loss, probs = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, plot=False, model=model)
+    model, loss, probs = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, model=model)
     torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
 
     continuous_output, discrete_output = utils.get_tabular_model_output(model, k, num_samples, feature_indices, continuous, diffusion, calculate_continuous=True)
