@@ -151,16 +151,15 @@ def forward_diffusion(dataset, num_steps, plot=False, num_divs=10):
     return diffusion
 
 
-def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
+def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, model=None):
+
     """Applies reverse diffusion to a dataset
 
     Args:
         dataset (torch.Tensor): the dataset to be used
-        diffusion (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
-                                Constants calculated from num_steps input to class constructor
-        training_time_steps (int): number of training steps to remove noise.  Default is step_size from diffusion class
+        diffusion (Diffusion): a diffusion model calss encapsulating proper constants for forward diffusion
+        training_time_steps (int): numver of training steps to remove noise. Default to step_size declared within the Diffusion class
         plot (bool): true if you want to plot the data showing the removal of the noise
-        num_divs (int): number of plots to show. Default is 10 and only applicable if plot=True
         model (ConditionalModel): optional argument to train a previously defined model
 
     Returns:
@@ -169,9 +168,6 @@ def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, num
     # Load variables from diffusion class
     loss = None
     num_steps = diffusion.num_steps
-    betas = diffusion.betas
-    alphas = diffusion.alphas
-    alphas_prod = diffusion.alphas_prod
     alphas_bar_sqrt = diffusion.alphas_bar_sqrt
     one_minus_alphas_bar_sqrt = diffusion.one_minus_alphas_bar_sqrt
 
@@ -239,32 +235,26 @@ def use_model(model, dataset, diffusion, t):
     return output
 
 
-def reverse_categorical_diffusion(discrete, features, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
+def reverse_categorical_diffusion(discrete, diffusion, k, feature_indices, batch_size=128, lr=1e-3, training_time_steps=0, model=None):
     """Applies reverse diffusion to a dataset
 
     NOTE: In order to use, must modify loss function to use only categorical model
     Args:
         discrete (torch.Tensor): the dataset to be used
-        features (list<strings>): a list of the feature names for the dataset
-        diffusion (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
-                                Constants calculated from num_steps input to class constructor
+        diffusion (Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
         k (int): number of total classes across all features
         feature_indices (list<tuples>): a list of the indices for all the features
+        batch_size (int): number of batch sizes in each reverse diffusion step
+        lr (float): learning rate for the reverse diffusion
         training_time_steps (int): number of training steps to remove noise.  Default is step_size from diffusion class
-        plot (bool): true if you want to plot the data showing the removal of the noise
-        num_divs (int): number of plots to show. Default is 10 and only applicable if plot=True
         model (ConditionalModel): optional argument to train a previously defined model
+
     Returns:
         model (ConditionalModel): the trained model
     """
     # Load variables from diffusion class
     loss = None
     num_steps = diffusion.num_steps
-    betas = diffusion.betas
-    alphas = diffusion.alphas
-    alphas_prod = diffusion.alphas_prod
-    alphas_bar_sqrt = diffusion.alphas_bar_sqrt
-    one_minus_alphas_bar_sqrt = diffusion.one_minus_alphas_bar_sqrt
 
     if training_time_steps == 0:
         training_time_steps = num_steps
@@ -312,19 +302,18 @@ def reverse_categorical_diffusion(discrete, features, diffusion, k, feature_indi
     return model, loss_list, prob_list
 
 
-def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size = 128, lr=1e-3, training_time_steps=0, plot=False, num_divs=10, show_heatmap=False, model=None):
+def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size=128, lr=1e-3, training_time_steps=0, model=None):
     """Applies reverse diffusion to a dataset
 
     Args:
         discrete (torch.Tensor): the discrete features
         continuous (torch.Tensor): the continuous features
-        diffusion (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
-                                Constants calculated from num_steps input to class constructor
+        diffusion (Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
         k (int): number of total classes across all features
         feature_indices (list<tuples>): a list of the indices for all the features
+        batch_size (int): number of batch sizes in each reverse diffusion step
+        lr (float): learning rate for the reverse diffusion
         training_time_steps (int): number of training steps to remove noise.  Default is step_size from diffusion class
-        plot (bool): true if you want to plot the data showing the removal of the noise
-        num_divs (int): number of plots to show. Default is 10 and only applicable if plot=True
         model (ConditionalModel): optional argument to train a previously defined model
 
     Returns:
@@ -333,9 +322,6 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
     # Load variables from diffusion class
     loss = None
     num_steps = diffusion.num_steps
-    betas = diffusion.betas
-    alphas = diffusion.alphas
-    alphas_prod = diffusion.alphas_prod
     alphas_bar_sqrt = diffusion.alphas_bar_sqrt
     one_minus_alphas_bar_sqrt = diffusion.one_minus_alphas_bar_sqrt
 
