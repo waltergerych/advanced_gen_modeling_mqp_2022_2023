@@ -8,6 +8,17 @@ import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.feature_selection import SelectKBest
+import torch
+import torch.nn as nn
+import torchvision
+import torch.nn.functional as F
+from torch.optim import Adam
+from torch.autograd import Variable
+from torchvision.datasets import CIFAR10
+from torchvision.transforms import transforms
+from torch.utils.data import DataLoader
+import glob
+from PIL import Image
 
 from utils import * 
 from model import ConditionalModel
@@ -16,6 +27,7 @@ from evaluate import *
 from classifier import *
 from diffusion import *
 from gan import *
+
 
 # Set plot style
 hdr_plot_style()
@@ -38,7 +50,8 @@ test_x, test_y = load_data('dataset/UCI_HAR_Dataset', 'test')
     # print(f)
 # print(os.path.exists('../dataset/UCI_HAR_Dataset_Triaxial/train/Intertial_Signals'))
 total_acc_x_train = np.loadtxt('dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/total_acc_x_train.txt')
-body_gyro_x_train = np.loadtxt('dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/body_gyro_x_train.txt')
+total_acc_y_train = np.loadtxt('dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/total_acc_y_train.txt')
+total_acc_z_train = np.loadtxt('dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/total_acc_z_train.txt')
 CUSTOM_TYPE = "three_values"
 custom_acc = np.loadtxt(f'dataset/UCI_HAR_Dataset_Triaxial/train/Inertial_Signals/custom_acc_{CUSTOM_TYPE}.txt')
 
@@ -48,7 +61,7 @@ HAR_data_classes = ["Walking", "Upstairs", "Downstairs", "Sitting", "Standing", 
 # classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
 # Make the class specific directories for GAF images
-parent_folder = "difusion_models/GAF_Class_Data"
+parent_folder = "difusion_models/GAF_RGB_Class_Images_Training"
 subfolders = []
 for HAR_class in HAR_data_classes:
     subfolders.append(f"diffusion_models/GAF_Class_Data/{HAR_class}")
@@ -68,7 +81,7 @@ from pyts.image import GramianAngularField
 # Define dataset to generate images on (Must be 2D array)
 # Using only x axis of total acceleration to test
 # task = total_acc_x_train[0:1000]
-task = total_acc_x_train
+task = total_acc_z_train
 
 # Define GAF and fit to data
 gadf = GramianAngularField(image_size=48, method='difference')
@@ -77,7 +90,8 @@ X_gadf = gadf.fit_transform(task)
 len_task = len(task)
 
 # Check that the directory to save the images exists or create it
-GAF_DIRECTORY = 'diffusion_models/GAF_Class_Data'
+GAF_DIRECTORY = 'diffusion_models/GAF_RGB_Class_Images_Testing'
+
 if not os.path.isdir(GAF_DIRECTORY):
     os.makedirs(GAF_DIRECTORY, exist_ok=True)
 
@@ -89,72 +103,9 @@ for i in range(len_task):
     plt.axis('off')
     plt.imshow(X_gadf[i], extent=[0, 1, 0, 1], cmap = 'coolwarm', aspect = 'auto',vmax=abs(X_gadf[i]).max(), vmin=-abs(X_gadf[i]).max())
     plt.savefig(f'{GAF_DIRECTORY}/{HAR_data_classes[labels_int[i]]}/{i}.jpg', bbox_inches='tight')
+    # plt.savefig(f'{GAF_DIRECTORY}/{i}.jpg', bbox_inches='tight')
     plt.close("all")
 
-
-from diffusers import DiffusionPipeline
-
-# Unconditional diffusion model
-pipeline = DiffusionPipeline.from_pretrained("google/ddpm-celebahq-256")
-
-# test_img = pipeline(
-#     train_data_dir="classification_images_gadf",
-#     dataset_name="classification_images_gadf",
-#     resolution=64,
-#     output_dor="testing_diffusion_output",
-#     train_batch_size=16,
-#     num_epochs=100,
-#     gradient_accumulation_steps=1,
-#     learning_rate=1e-4,
-#     lr_warmup_steps=500,
-#     mixed_precision="no",
-#     ).images[0]
-
-# accelerate launch main.py \
-#   --train_data_dir "GAF_Testing_Images" \
-#   --dataset_name="GAF_Testing_Images" \
-#   --resolution=64 \
-#   --output_dir="GAF_Output" \
-#   --train_batch_size=16 \
-#   --num_epochs=100 \
-#   --gradient_accumulation_steps=1 \
-#   --learning_rate=1e-4 \
-#   --lr_warmup_steps=500 \
-#   --mixed_precision=no \
-
-
-#   --push_to_hub
-
-
-
-
-# from diffusers import StableDiffusionImg2ImgPipeline
-# import requests
-# from PIL import Image
-# from io import BytesIO
-
-# # load the pipeline
-# pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
-#     "CompVis/stable-diffusion-v1-4", revision="fp16", torch_dtype=torch.float16
-# )
-
-# # let's download an initial image
-# url = "https://raw.githubusercontent.com/CompVis/stable-diffusion/main/assets/stable-samples/img2img/sketch-mountains-input.jpg"
-
-# response = requests.get(url)
-# init_image = Image.open(BytesIO(response.content)).convert("RGB")
-# init_image = init_image.resize((768, 512))
-
-# prompt = "A fantasy landscape, trending on artstation"
-
-# images = pipe(prompt=prompt, init_image=init_image, strength=0.75, guidance_scale=7.5).images
-
-# images[0].save("fantasy_landscape.png")
-
-
-
-# How to convert GAFs back to time series data?
-# https://stackoverflow.com/questions/13203017/converting-images-to-time-series
 
 
 
