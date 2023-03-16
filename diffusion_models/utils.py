@@ -143,7 +143,7 @@ def loss_variational(model, x_0,alphas_bar_sqrt, one_minus_alphas_bar_sqrt,poste
     return output.mean(-1)
 
 
-def noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, n_steps):
+def continuous_noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, n_steps):
     batch_size = x_0.shape[0]
     # Select a random step for each example
     t = torch.randint(0, n_steps, size=(batch_size // 2 + 1,))
@@ -163,29 +163,7 @@ def noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_b
     return (e - output).square().mean()
 
 
-def q_x_cat(x_0, diffs, t, k):
-    """Function to add t time steps of noise to discrete data x
-
-    Args:
-        x_0 (torch.Tensor): the discrete data to add noise to
-        diffs (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
-                                Constants calculated from num_steps input to class constructor
-        t (torch.Tensor): the number of noise steps to add
-        k (int): the number of classes for the feature
-
-    Returns:
-        (torch.Tensor): the data with the noise added to it
-    """
-    probs = get_probs(x_0)       # torch.Size([k])
-    cumprod_alpha = extract_cat(diffs.alphas_prod, t, x_0.shape)
-    cumprod_1_minus_alpha = extract_cat(diffs.one_minus_alphas_bar_sqrt, t, x_0.shape)
-    x_t_probs = cumprod_alpha*probs + cumprod_1_minus_alpha / k
-    x_t = resample(x_t_probs)
-
-    return torch.nn.functional.one_hot(x_t, k)
-
-
-def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k, feature_indices):
+def categorical_noise_estimation_loss(model, x_0, x_0_continuous, diffs, k, feature_indices):
     """Calculates the loss in estimating the noise of x_t
 
     Args:
@@ -248,6 +226,28 @@ def multinomial_diffusion_noise_estimation(model, x_0, x_0_continuous, diffs, k,
     theta = theta.squeeze(1)
 
     return (theta - output).square().mean()
+
+
+def q_x_cat(x_0, diffs, t, k):
+    """Function to add t time steps of noise to discrete data x
+
+    Args:
+        x_0 (torch.Tensor): the discrete data to add noise to
+        diffs (class: Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
+                                Constants calculated from num_steps input to class constructor
+        t (torch.Tensor): the number of noise steps to add
+        k (int): the number of classes for the feature
+
+    Returns:
+        (torch.Tensor): the data with the noise added to it
+    """
+    probs = get_probs(x_0)       # torch.Size([k])
+    cumprod_alpha = extract_cat(diffs.alphas_prod, t, x_0.shape)
+    cumprod_1_minus_alpha = extract_cat(diffs.one_minus_alphas_bar_sqrt, t, x_0.shape)
+    x_t_probs = cumprod_alpha*probs + cumprod_1_minus_alpha / k
+    x_t = resample(x_t_probs)
+
+    return torch.nn.functional.one_hot(x_t, k)
 
 
 def extract_cat(a, t, x_shape):
@@ -323,7 +323,7 @@ def normalize(probs):
 
 
 def to_one_hot(data, feature_indices):
-    """Makes one hot encoding of data with k classes"""
+    """Makes one hot encoding of data for each discrete features"""
     one_hot_list = []
     for i, class_index in enumerate(feature_indices):
         start, end = class_index

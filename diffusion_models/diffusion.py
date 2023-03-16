@@ -1,9 +1,8 @@
 # Code from https://github.com/azad-academy/denoising-diffusion-model/blob/main/diffusion_model_demo.ipynb
 # Internal libraries
 import utils
-import evaluate as eval
 from ema import EMA
-from model import ConditionalModel, ConditionalMultinomialModel, ConditionalTabularModel
+from model import ConditionalTabularModel
 
 # External libraries
 import matplotlib.pyplot as plt
@@ -151,74 +150,6 @@ def forward_diffusion(dataset, num_steps, plot=False, num_divs=10):
     return diffusion
 
 
-def reverse_diffusion(dataset, diffusion, training_time_steps=0, plot=False, model=None):
-
-    """Applies reverse diffusion to a dataset
-
-    Args:
-        dataset (torch.Tensor): the dataset to be used
-        diffusion (Diffusion): a diffusion model calss encapsulating proper constants for forward diffusion
-        training_time_steps (int): numver of training steps to remove noise. Default to step_size declared within the Diffusion class
-        plot (bool): true if you want to plot the data showing the removal of the noise
-        model (ConditionalModel): optional argument to train a previously defined model
-
-    Returns:
-        model (ConditionalModel): the trained model
-    """
-    # Load variables from diffusion class
-    loss = None
-    num_steps = diffusion.num_steps
-    alphas_bar_sqrt = diffusion.alphas_bar_sqrt
-    one_minus_alphas_bar_sqrt = diffusion.one_minus_alphas_bar_sqrt
-
-    if training_time_steps == 0:
-        training_time_steps = num_steps
-
-    # If no model given, create new one
-    if model == None:
-        model = ConditionalModel(num_steps, dataset.size()[1])
-
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
-
-    # Create EMA model
-    ema = EMA(0.9)
-    ema.register(model)
-
-    batch_size = 128
-    # Define training loop until f1 score for separability between real and fake goes below threshold
-    f1, t = 1.0, 0
-    while f1 > .6 and t < 10000:            # New loop for threshold or max t
-    # for t in range(training_time_steps):  # Previous loop for x amount of backwards steps
-        permutation = torch.randperm(dataset.size()[0])
-        for i in range(0, dataset.size()[0], batch_size):
-            # Retrieve current batch
-            indices = permutation[i:i+batch_size]
-            batch_x = dataset[indices]
-            # Compute the loss
-            loss = utils.noise_estimation_loss(model, batch_x, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
-            # Before the backward pass, zero all of the network gradients
-            optimizer.zero_grad()
-            # Backward pass: compute gradient of the loss with respect to parameters
-            loss.backward()
-            # Perform gradient clipping
-            clip_grad.clip_grad_norm_(model.parameters(), 1.)
-            # Calling the step function to update the parameters
-            optimizer.step()
-            # Update the exponential moving average
-            ema.update(model)
-        # Print loss
-        if t % 1000 == 0:
-            fake = utils.get_model_output(model, dataset.shape[1], diffusion, num_to_gen=1000)
-            _, _, _, f1 = eval.separability(dataset, fake, train_test_ratio=.7, printStats=False)
-        if loss:
-            print(f'Training Steps: {t}\tLoss: {round(loss.item(), 4)}\tF1: {round(f1, 4)}\r', end='')
-        t += 1
-    if plot:
-        plt.show()
-
-    return model
-
-
 def use_model(model, dataset, diffusion, t):
     """Takes in a trained diffusion model and creates n datapoints from Gaussian noise
 
@@ -233,73 +164,6 @@ def use_model(model, dataset, diffusion, t):
     """
     output = utils.p_sample(model, dataset, t, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
     return output
-
-
-def reverse_categorical_diffusion(discrete, diffusion, k, feature_indices, batch_size=128, lr=1e-3, training_time_steps=0, model=None):
-    """Applies reverse diffusion to a dataset
-
-    NOTE: In order to use, must modify loss function to use only categorical model
-    Args:
-        discrete (torch.Tensor): the dataset to be used
-        diffusion (Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
-        k (int): number of total classes across all features
-        feature_indices (list<tuples>): a list of the indices for all the features
-        batch_size (int): number of batch sizes in each reverse diffusion step
-        lr (float): learning rate for the reverse diffusion
-        training_time_steps (int): number of training steps to remove noise.  Default is step_size from diffusion class
-        model (ConditionalModel): optional argument to train a previously defined model
-
-    Returns:
-        model (ConditionalModel): the trained model
-    """
-    # Load variables from diffusion class
-    loss = None
-    num_steps = diffusion.num_steps
-
-    if training_time_steps == 0:
-        training_time_steps = num_steps
-
-    # If no model given, create new one
-    if model == None:
-        model = ConditionalMultinomialModel(num_steps, discrete.shape[1])
-
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-
-    # Create EMA model
-    ema = EMA(0.9)
-    ema.register(model)
-
-    # Only tracked for graphing loss afterwards
-    loss_list, prob_list = [], []
-
-    for t in range(training_time_steps):
-        permutation_discrete = torch.randperm(discrete.shape[0])
-        for i in range(0, discrete.shape[0], batch_size):
-            # Retrieve current batch
-            indices_discrete = permutation_discrete[i:i+batch_size]
-            batch_x_discrete = discrete[indices_discrete]
-            # One hot encoding
-            batch_x_discrete = utils.to_one_hot(batch_x_discrete, k, feature_indices)
-            # Compute the loss
-            loss = utils.multinomial_diffusion_noise_estimation(model, batch_x_discrete, diffusion, k, feature_indices)
-            # Before the backward pass, zero all of the network gradients
-            optimizer.zero_grad()
-            # Backward pass: compute gradient of the loss with respect to parameters
-            loss.backward()
-            # Perform gradient clipping
-            clip_grad.clip_grad_norm_(model.parameters(), 1.)
-            # Calling the step function to update the parameters
-            optimizer.step()
-            # Update the exponential moving average
-            ema.update(model)
-        # Print loss
-        p = utils.get_discrete_model_output(model, k, 1, feature_indices).squeeze(0)
-        prob_list.append(p)
-        if loss:
-            print(f'Training Steps: {t}\tLoss: {round(loss.item(), 8)}\r', end='')
-            loss_list.append(loss.item())
-
-    return model, loss_list, prob_list
 
 
 def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size=128, lr=1e-3, training_time_steps=0, model=None, show_loss=False):
@@ -352,10 +216,10 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
             batch_x_discrete = discrete[indices_discrete]
             batch_x_continuous = continuous[indices_continuous]
             # One hot encoding
-            batch_x_discrete = utils.to_one_hot(batch_x_discrete, k, feature_indices)
+            batch_x_discrete = utils.to_one_hot(batch_x_discrete, feature_indices)
             # Compute the loss
-            multinomial_loss = utils.multinomial_diffusion_noise_estimation(model, batch_x_discrete, batch_x_continuous, diffusion, k, feature_indices)
-            continuous_loss = utils.noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
+            multinomial_loss = utils.categorical_noise_estimation_loss(model, batch_x_discrete, batch_x_continuous, diffusion, k, feature_indices)
+            continuous_loss = utils.continuous_noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
             loss = multinomial_loss + 2 * continuous_loss
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()
