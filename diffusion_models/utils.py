@@ -57,7 +57,7 @@ def p_mean_variance(model, x, t):
     out = model(x, t)
     # Extract the mean and variance
     mean, log_var = torch.split(out, 2, dim=-1)
-    var = torch.exp(log_var)
+    # var = torch.exp(log_var)
     return mean, log_var
 
 
@@ -266,7 +266,7 @@ def resample2(distribution, n):
 
     Was being used, but in original fw diffusion used resample function below"""
     log_probs = F.log_softmax(distribution, dim=-1)
-    num_feat = distribution.shape[0]
+    # num_feat = distribution.shape[0]
 
     # Create a categorical distribution for each sample in the batch
     categories = [Categorical(logits=log_probs[i]) for i in range(log_probs.shape[0])]
@@ -322,7 +322,7 @@ def normalize(probs):
     return probs / sum
 
 
-def to_one_hot(data, k, feature_indices):
+def to_one_hot(data, feature_indices):
     """Makes one hot encoding of data with k classes"""
     one_hot_list = []
     for i, class_index in enumerate(feature_indices):
