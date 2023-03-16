@@ -302,7 +302,7 @@ def reverse_categorical_diffusion(discrete, diffusion, k, feature_indices, batch
     return model, loss_list, prob_list
 
 
-def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size=128, lr=1e-3, training_time_steps=0, model=None):
+def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size=128, lr=1e-3, training_time_steps=0, model=None, show_loss=False):
     """Applies reverse diffusion to a dataset
 
     Args:
@@ -370,7 +370,7 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
         # Print loss
         _, p = utils.get_tabular_model_output(model, k, 1000, feature_indices, continuous, diffusion, calculate_continuous=False)
         prob_list.append(p.squeeze(0))
-        if loss and multinomial_loss and continuous_loss:
+        if show_loss and loss and multinomial_loss and continuous_loss:
             print(f'Training Steps: {t}\tContinuous Loss: {round(continuous_loss.item(), 8)}\tDiscrete Loss: {round(multinomial_loss.item(), 8)}', end='\n')
             loss_list.append(loss.item())
 

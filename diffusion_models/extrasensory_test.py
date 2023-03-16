@@ -2,45 +2,46 @@
 import diffusion as dfn
 import evaluate as eval
 import utils
-import torch
+from model import ConditionalTabularModel
 
 # External libraries
 import matplotlib.pyplot as plt
-from model import ConditionalTabularModel
+import torch
 
 
 def main():
     """Toy dataset for continuous + discrete diffusion model
     """
-    # User ID for ExtraSensory dataset
+    # user ID for ExtraSensory dataset
     uid = '1155FF54-63D3-4AB2-9863-8385D0BD0A13'
     df,_,_ = utils.read_user_data(uid)
 
     features = df.columns.tolist()
     data = torch.tensor(df.values)
 
-    # Variables for diffusion
-    NUM_STEPS = 100             # Low for testing to speed up
+    # variables for diffusion
+    NUM_STEPS = 1000             # Low for testing to speed up
     NUM_REVERSE_STEPS = 100    # ~Epochs
     LEARNING_RATE = .001
     BATCH_SIZE = 128
     HIDDEN_SIZE = 128
     diffusion = dfn.get_denoising_variables(NUM_STEPS)
 
-    # Separate the continuous and discrete data
+    # separate the continuous and discrete data
     continuous, discrete = utils.separate_tabular_data(data, features)
 
-    # Select one feature, just for initial testing
+    # select one feature, just for initial testing
     discrete = torch.squeeze(discrete[:, 4])        # Prob [.6775, .3225]
 
-    # New testing data rather than real data --> Trying to get this working first
+    # new testing data rather than real data --> Trying to get this working first
     test_data = []
     w1 = torch.tensor([.95, .05])
-    w2 = torch.tensor([.2, .8])
+    w2 = torch.tensor([.1, .3, .6])
     num_samples = 1000
     test_data.append(torch.multinomial(w1, num_samples, replacement=True))
     test_data.append(torch.multinomial(w2, num_samples, replacement=True))
     discrete = torch.stack(test_data, dim=1)
+
 
     test_cont_data = []
     test_cont_data.append(torch.distributions.Beta(2, 25).sample(sample_shape=torch.Size([num_samples])))
@@ -56,7 +57,7 @@ def main():
         feature_indices.append((k, k + num))
         k += num
 
-    # Declare model
+    # declare model
     model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
     # model.load_state_dict(torch.load(f'./models/tabular_{NUM_STEPS}.pth'))
     model, loss, probs = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, model=model)

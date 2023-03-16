@@ -468,7 +468,7 @@ def separability(real, fake, train_test_ratio, printStats=True):
         print('\nSeparability:')
         print(f'Accuracy:\t{accuracy}')
         print(f'Precision:\t{precision}')
-        print(f'Recall:\t{recall}')
+        print(f'Recall:\t\t{recall}')
         print(f'F1:\t\t{f1}')
 
     return accuracy, precision, recall, f1
