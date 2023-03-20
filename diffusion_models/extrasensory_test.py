@@ -42,7 +42,6 @@ def main():
     test_data.append(torch.multinomial(w2, num_samples, replacement=True))
     discrete = torch.stack(test_data, dim=1)
 
-
     test_cont_data = []
     test_cont_data.append(torch.distributions.Beta(2, 25).sample(sample_shape=torch.Size([num_samples])))
     test_cont_data.append(0 - torch.distributions.Beta(5, 1).sample(sample_shape=torch.Size([num_samples])))
@@ -63,7 +62,7 @@ def main():
     model, loss, probs = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, model=model)
     torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
 
-    continuous_output, discrete_output = utils.get_tabular_model_output(model, k, num_samples, feature_indices, continuous, diffusion, calculate_continuous=True)
+    continuous_output, discrete_output = utils.get_tabular_model_output(model, k, num_samples, feature_indices, continuous.shape[1], diffusion, calculate_continuous=True)
     print(discrete_output)
     eval.separability(continuous, continuous_output, train_test_ratio=.7)
 

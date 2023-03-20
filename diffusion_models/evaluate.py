@@ -452,7 +452,7 @@ def separability(real, fake, train_test_ratio, printStats=True):
         # Make prediction, evaluate, and add to totals
         pred = model.predict(test_x)
         accuracy, precision, recall, f1 = score(test_y, pred)
-        print(confusion_matrix(test_y, pred))
+        # print(confusion_matrix(test_y, pred))
         accuracies += accuracy
         precisions += precision
         recalls += recall

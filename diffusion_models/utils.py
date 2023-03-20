@@ -143,27 +143,27 @@ def loss_variational(model, x_0,alphas_bar_sqrt, one_minus_alphas_bar_sqrt,poste
     return output.mean(-1)
 
 
-def continuous_noise_estimation_loss(model, x_0, x_0_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, n_steps):
-    batch_size = x_0.shape[0]
+def continuous_noise_estimation_loss(model, x_0_continuous, x_0_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, n_steps):
+    batch_size = x_0_continuous.shape[0]
     # Select a random step for each example
     t = torch.randint(0, n_steps, size=(batch_size // 2 + 1,))
     t = torch.cat([t, n_steps - t - 1], dim=0)[:batch_size].long()
     # x0 multiplier
-    a = extract(alphas_bar_sqrt, t, x_0)
+    a = extract(alphas_bar_sqrt, t, x_0_continuous)
     # eps multiplier
-    am1 = extract(one_minus_alphas_bar_sqrt, t, x_0)
+    am1 = extract(one_minus_alphas_bar_sqrt, t, x_0_continuous)
     # Get noise for input
-    e = torch.randn_like(x_0)
+    e = torch.randn_like(x_0_continuous)
     weights = torch.tensor([1/k]).repeat(k)
     c = torch.multinomial(weights, x_0_discrete.shape[0], replacement=True)
     c = torch.nn.functional.one_hot(c, k).float()
     # model input
-    x = x_0 * a + e * am1
+    x = x_0_continuous * a + e * am1
     output, _ = model(x, c, t, feature_indices)
     return (e - output).square().mean()
 
 
-def categorical_noise_estimation_loss(model, x_0, x_0_continuous, diffs, k, feature_indices):
+def categorical_noise_estimation_loss(model, x_0_continuous, x_0_discrete, diffs, k, feature_indices):
     """Calculates the loss in estimating the noise of x_t
 
     Args:
@@ -181,7 +181,7 @@ def categorical_noise_estimation_loss(model, x_0, x_0_continuous, diffs, k, feat
 
     """
     n_steps = diffs.num_steps
-    batch_size = x_0.shape[0]
+    batch_size = x_0_discrete.shape[0]
 
     # Select a random step for each example
     t = torch.randint(0, n_steps, size=(batch_size // 2 + 1,))
@@ -194,20 +194,20 @@ def categorical_noise_estimation_loss(model, x_0, x_0_continuous, diffs, k, feat
     # Get x_t for each time step in feature
     batch_x_list = []
     for index in feature_indices:
-        feature = x_0[:, index[0]:index[1]]
+        feature = x_0_discrete[:, index[0]:index[1]]
         k_x = index[1] - index[0]
         batch_feature = q_x_cat(feature, diffs, t, k_x)
         batch_x_list.append(batch_feature)
     batch_x_t = torch.cat(batch_x_list, dim=1)
 
     # Extract values for loss
-    alpha = extract(diffs.alphas, t, x_0)
+    alpha = extract(diffs.alphas, t, x_0_discrete)
     one_minus_alpha = 1 - alpha
-    alphas_prod = extract(diffs.alphas_prod, t_1, x_0)
+    alphas_prod = extract(diffs.alphas_prod, t_1, x_0_discrete)
     one_minus_alpha_prod = 1 - alphas_prod
 
     # Calculate theta (expected value)
-    theta = (alpha * batch_x_t + one_minus_alpha / k) * (alphas_prod * x_0 + one_minus_alpha_prod / k)
+    theta = (alpha * batch_x_t + one_minus_alpha / k) * (alphas_prod * x_0_discrete + one_minus_alpha_prod / k)
 
     # Normalize each feature at every time step so it sums to one
     feature_normalization = []
@@ -217,7 +217,7 @@ def categorical_noise_estimation_loss(model, x_0, x_0_continuous, diffs, k, feat
 
     # Get random noise for model
     weights = torch.tensor([1/k]).repeat(k)
-    e = torch.multinomial(weights, x_0.shape[0], replacement=True)
+    e = torch.multinomial(weights, x_0_discrete.shape[0], replacement=True)
     e = torch.nn.functional.one_hot(e, k).float()
     g = torch.randn(x_0_continuous.shape)
 
@@ -362,7 +362,7 @@ def p_tabular_sample(model, x, e, t, feature_indices, alphas, betas, one_minus_a
     # Fixed sigma
     sigma_t = extract(betas, t, x).sqrt()
     sample = mean + sigma_t * z
-    return (sample)
+    return sample
 
 
 def p_tabular_sample_loop(model, e, shape, feature_indices, n_steps, alphas, betas, one_minus_alphas_bar_sqrt):
@@ -372,7 +372,8 @@ def p_tabular_sample_loop(model, e, shape, feature_indices, n_steps, alphas, bet
     for i in reversed(range(n_steps)):
         cur_x = p_tabular_sample(model, cur_x, e, i, feature_indices, alphas, betas, one_minus_alphas_bar_sqrt)
         x_seq.append(cur_x)
-    return x_seq[-1]
+    noise_removed = x_seq[-1]
+    return noise_removed
 
 
 def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous):
@@ -394,25 +395,35 @@ def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous)
     return continuous_output, discrete_output[0]
 
 
-def get_tabular_model_output(model, k, num_to_gen, feature_indices, continuous, diffusion, calculate_continuous=False):
-    """Gets the output of a tabular model
+def get_tabular_model_output(model, k, sample_size, feature_indices, num_continuous_feature, diffusion, calculate_continuous=False):
+
+    """Gets the output of the tabular model
+
+    Args:
+        model (ConditionalTabularModel): the tabular diffusion model for reverse diffusion
+        k (int): number of discrete classes
+        sample_size (intc): number of sample size to generate
+        feature_indices (list<tuples>): a list of the indices for all the features
+        num_continuous_feature (int): number of continuous features
+        diffusion (Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
+        calculate_continuous (bool): True if continuous output is wanted
 
     Returns:
         continuous_output (torch.Tensor): the generated data
         discrete_output (torch.Tensor): a probability tensor of size n*k
     """
-    t = torch.Tensor([0]).repeat(num_to_gen).int()
+    t = torch.Tensor([0]).repeat(sample_size).int()
     weights = torch.Tensor([1]) / k
     weights = weights.repeat(k)
-    e = torch.multinomial(weights, num_to_gen, replacement=True)
+    e = torch.multinomial(weights, sample_size, replacement=True)
     e = torch.nn.functional.one_hot(e, k).float()
-    g = torch.randn((num_to_gen, continuous.shape[1]))
+    g = torch.randn((sample_size, num_continuous_feature))
     with torch.no_grad():
         _, discrete_output = model(g, e, t, feature_indices)
         continuous_output = 1
-        if(calculate_continuous):
-            continuous_output = p_tabular_sample_loop(model, e, torch.Size([num_to_gen, continuous.shape[1]]), feature_indices, diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
-    return continuous_output, discrete_output[0]
+        if calculate_continuous:
+            continuous_output = p_tabular_sample_loop(model, e, torch.Size([sample_size, num_continuous_feature]), feature_indices, diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
+    return continuous_output, discrete_output
 
 
 def load_data(dataset, dataset_type):

@@ -54,15 +54,17 @@ class ConditionalTabularModel(nn.Module):
         self.lin1 = ConditionalLinear(continuous_size + discrete_size, hidden_size, n_steps)
         self.lin2 = ConditionalLinear(hidden_size, hidden_size, n_steps)
         self.lin3 = ConditionalLinear(hidden_size, hidden_size, n_steps)
-        self.lin4 = nn.Linear(hidden_size, hidden_size)
-        self.lin5 = nn.ReLU()
-        self.lin6 = nn.Linear(hidden_size, hidden_size)
-        self.lin7 = nn.ReLU()
-        self.lin8 = nn.Linear(hidden_size, hidden_size)
-        self.lin9 = nn.ReLU()
-        self.lin10 = nn.Linear(hidden_size, hidden_size)
-        self.lin11 = nn.Linear(hidden_size, continuous_size)
-        self.lin12 = nn.Linear(hidden_size, discrete_size)
+        # discrete
+        self.lin_d = nn.Linear(hidden_size, discrete_size)
+        # continuous
+        self.lin_c1 = nn.Linear(hidden_size, hidden_size)
+        self.relu1 = nn.ReLU()
+        self.lin_c2 = nn.Linear(hidden_size, hidden_size)
+        self.relu2 = nn.ReLU()
+        self.lin_c3 = nn.Linear(hidden_size, hidden_size)
+        self.relu3 = nn.ReLU()
+        self.lin_c4 = nn.Linear(hidden_size, hidden_size)
+        self.lin_c5 = nn.Linear(hidden_size, continuous_size)
 
 
     def forward(self, x_c, x_d, y, feature_indices):
@@ -70,19 +72,20 @@ class ConditionalTabularModel(nn.Module):
         x = F.softplus(self.lin1(x, y))
         x = F.softplus(self.lin2(x, y))
         x = F.softplus(self.lin3(x, y))
-        x_c = self.lin4(x)
-        x_c = self.lin5(x_c)
-        x_c = self.lin6(x_c)
-        x_c = self.lin7(x_c)
-        x_c = self.lin8(x_c)
-        x_c = self.lin9(x_c)
-        x_c = self.lin10(x_c)
-        x_c = self.lin11(x_c)
-        x_d = self.lin12(x)
+        x_d = self.lin_d(x)
+        x_c = self.lin_c1(x)
+        x_c = self.relu1(x_c)
+        x_c = self.lin_c2(x_c)
+        x_c = self.relu2(x_c)
+        x_c = self.lin_c3(x_c)
+        x_c = self.relu3(x_c)
+        x_c = self.lin_c4(x_c)
+        x_c = self.lin_c5(x_c)
         results = []
         for class_index in feature_indices:
             start, end = class_index
-            results.append(F.softmax(x[:, start:end], dim=1))
+            curr_class = F.softmax(x[:, start:end], dim=1)
+            results.append(curr_class)
         x_d = torch.cat(results, dim=1)
         return x_c, x_d
 
