@@ -232,8 +232,8 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
             # Update the exponential moving average
             ema.update(model)
         # Print loss
-        _, discrete_output = utils.get_tabular_model_output(model, k, 1000, feature_indices, continuous.shape[1], diffusion, calculate_continuous=False)
-        prob_list.append(discrete_output[0].squeeze(0))
+        _,_, discrete_distribution = utils.get_tabular_model_output(model, k, 1000, feature_indices, continuous.shape[1], diffusion, calculate_continuous=False)
+        prob_list.append(discrete_distribution.squeeze(0))
         if loss:
             if show_loss and multinomial_loss and continuous_loss:
                 print(f'Training Steps: {t}\tContinuous Loss: {round(continuous_loss.item(), 8)}\tDiscrete Loss: {round(multinomial_loss.item(), 8)}', end='\n')

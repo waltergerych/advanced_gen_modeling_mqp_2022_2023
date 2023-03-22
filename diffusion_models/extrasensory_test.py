@@ -60,22 +60,23 @@ def main():
     model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
     # model.load_state_dict(torch.load(f'./models/tabular_{NUM_STEPS}.pth'))
     model, loss, probs = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, model=model)
-    torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
+    # torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
 
-    continuous_output, discrete_output = utils.get_tabular_model_output(model, k, num_samples, feature_indices, continuous.shape[1], diffusion, calculate_continuous=True)
-    print(discrete_output)
+    continuous_output, discrete_output, discrete_distribution = utils.get_tabular_model_output(model, k, num_samples, feature_indices, continuous.shape[1], diffusion, calculate_continuous=True)
+    print(discrete_output.shape)
+    print(discrete_distribution.shape)
     eval.separability(continuous, continuous_output, train_test_ratio=.7)
 
     x = range(NUM_REVERSE_STEPS)
     plt.plot(x, loss)
-    plt.show()
+    # plt.show()
 
     probs = torch.stack(probs)
 
     x = range(NUM_REVERSE_STEPS)
     plt.plot(x, probs)
     plt.legend(['f1/c1','f1/c2','f2/c1','f2/c2'])
-    plt.show()
+    # plt.show()
 
     true_data_sample = continuous[:, :]
     x1 = continuous_output[:, 0]
@@ -86,7 +87,7 @@ def main():
     plt.scatter(x1, y1, c='blue')
     plt.scatter(x2, y2, c='green')
     plt.legend(['fake', 'real'])
-    plt.show()
+    # plt.show()
 
 
 if __name__ == "__main__":

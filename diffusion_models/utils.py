@@ -61,7 +61,7 @@ def p_mean_variance(model, x, t):
     return mean, log_var
 
 
-def p_sample(model, x, t,alphas,betas,one_minus_alphas_bar_sqrt):
+def p_sample(model, x, t, alphas, betas, one_minus_alphas_bar_sqrt):
     t = torch.tensor([t])
     # Factor to the model output
     eps_factor = ((1 - extract(alphas, t, x)) / extract(one_minus_alphas_bar_sqrt, t, x))
@@ -82,7 +82,7 @@ def p_sample_loop(model, shape,n_steps,alphas,betas,one_minus_alphas_bar_sqrt):
     cur_x = torch.randn(shape)
     x_seq = [cur_x]
     for i in reversed(range(n_steps)):
-        cur_x = p_sample(model, cur_x, i,alphas,betas,one_minus_alphas_bar_sqrt)
+        cur_x = p_sample(model, cur_x, i, alphas, betas, one_minus_alphas_bar_sqrt)
         x_seq.append(cur_x)
     return x_seq
 
@@ -261,24 +261,6 @@ def log_add_exp(a, b):
     return maximum + torch.log(torch.exp(a - maximum) + torch.exp(b - maximum))
 
 
-def resample2(distribution, n):
-    """Resamples from a distribution n times
-
-    Was being used, but in original fw diffusion used resample function below"""
-    log_probs = F.log_softmax(distribution, dim=-1)
-    # num_feat = distribution.shape[0]
-
-    # Create a categorical distribution for each sample in the batch
-    categories = [Categorical(logits=log_probs[i]) for i in range(log_probs.shape[0])]
-
-    # Sample from each categorical distribution
-    samples = [c.sample(torch.Size([n])) for c in categories]
-
-    # Convert the samples to a tensor
-    samples_tensor = torch.stack(samples)
-    return samples_tensor
-
-
 def resample(distribution):
     """Resamples from a probability distribution
 
@@ -354,7 +336,7 @@ def p_tabular_sample(model, x, e, t, feature_indices, alphas, betas, one_minus_a
     # Factor to the model output
     eps_factor = ((1 - extract(alphas, t, x)) / extract(one_minus_alphas_bar_sqrt, t, x))
     # Model output
-    eps_theta, _ = model(x, e, t, feature_indices)
+    eps_theta,_ = model(x, e, t, feature_indices)
     # Final values
     mean = (1 / extract(alphas, t, x).sqrt()) * (x - (eps_factor * eps_theta))
     # Generate z
@@ -367,11 +349,11 @@ def p_tabular_sample(model, x, e, t, feature_indices, alphas, betas, one_minus_a
 
 def p_tabular_sample_loop(model, e, shape, feature_indices, n_steps, alphas, betas, one_minus_alphas_bar_sqrt):
     """Removes noise from data one step at a time and appends each step into a list"""
-    cur_x = torch.randn(shape)
-    x_seq = [cur_x]
+    curr_x = torch.randn(shape)
+    x_seq = [curr_x]
     for i in reversed(range(n_steps)):
-        cur_x = p_tabular_sample(model, cur_x, e, i, feature_indices, alphas, betas, one_minus_alphas_bar_sqrt)
-        x_seq.append(cur_x)
+        curr_x = p_tabular_sample(model, curr_x, e, i, feature_indices, alphas, betas, one_minus_alphas_bar_sqrt)
+        x_seq.append(curr_x)
     noise_removed = x_seq[-1]
     return noise_removed
 
@@ -396,7 +378,6 @@ def get_discrete_model_output(model, k, num_to_gen, feature_indices, continuous)
 
 
 def get_tabular_model_output(model, k, sample_size, feature_indices, num_continuous_feature, diffusion, calculate_continuous=False):
-
     """Gets the output of the tabular model
 
     Args:
@@ -412,18 +393,27 @@ def get_tabular_model_output(model, k, sample_size, feature_indices, num_continu
         continuous_output (torch.Tensor): the generated data
         discrete_output (torch.Tensor): a probability tensor of size n*k
     """
+    # continuous output
     t = torch.Tensor([0]).repeat(sample_size).int()
     weights = torch.Tensor([1]) / k
     weights = weights.repeat(k)
     e = torch.multinomial(weights, sample_size, replacement=True)
     e = torch.nn.functional.one_hot(e, k).float()
     g = torch.randn((sample_size, num_continuous_feature))
+
     with torch.no_grad():
-        _, discrete_output = model(g, e, t, feature_indices)
         continuous_output = 1
         if calculate_continuous:
             continuous_output = p_tabular_sample_loop(model, e, torch.Size([sample_size, num_continuous_feature]), feature_indices, diffusion.num_steps, diffusion.alphas, diffusion.betas, diffusion.one_minus_alphas_bar_sqrt)
-    return continuous_output, discrete_output
+
+        # discrete output
+        _, discrete_distribution = model(g, e, t, feature_indices)
+        discreate_features = []
+        for start, end in feature_indices:
+            discreate_features.append(resample(discrete_distribution[:,start:end]).unsqueeze(1))
+        discrete_output = torch.cat(discreate_features, 1)
+
+    return continuous_output, discrete_output, discrete_distribution[0]
 
 
 def load_data(dataset, dataset_type):
@@ -528,15 +518,3 @@ def separate_tabular_data(data, features):
     continuous = torch.index_select(data, 1, torch.tensor(continuous_indices))
 
     return continuous, discrete
-
-
-def get_condition(discrete):
-    """Gets a random categorical variable and samples from that distribution
-
-    Args:
-        discrete (torch.Tensor): the discrete features
-
-    Returns:
-        condition (int): a one-hot encoded condition of a random categorical variable
-    """
-    # Function needed for tabular diffusion training model

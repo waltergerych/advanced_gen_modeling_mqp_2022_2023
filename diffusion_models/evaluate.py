@@ -528,7 +528,7 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
         print(f'\nEvaluating class {classes[i]}')
 
         # Train classifier on real data
-        print('Testing classifier trained on real data')
+        print('Testing binary classifier trained on real data')
         classifier = build_binary_classifier(real_train_x, real_train_y, classes, i)
 
         # Train on real, test on real
@@ -548,7 +548,7 @@ def binary_machine_evaluation(dataset, labels, fake, fake_labels, classes, test_
         csv_data["real"]["fake"]["f1"].append(f1)
 
         # Train classifier on diffusion model generated data
-        print('Testing classifier trained on fake data')
+        print('Testing binary classifier trained on fake data')
         classifier = build_binary_classifier(fake_train_x, fake_train_y, classes, i)
 
         # Train on fake, test on real
@@ -600,7 +600,7 @@ def multiclass_machine_evaluation(dataset, labels, fake, fake_labels, test_train
     fake_train_x, fake_test_x, fake_train_y, fake_test_y = train_test_split(fake, fake_labels, test_size=test_train_ratio)
 
     # Train classifier on real data
-    print('Testing classifier trained on real data')
+    print('Testing multi-class classifier trained on real data')
     classifier = build_multiclass_classifier(real_train_x, real_train_y)
 
     print('Evaluating on real data')
@@ -610,7 +610,7 @@ def multiclass_machine_evaluation(dataset, labels, fake, fake_labels, test_train
     test_multiclass_classifier(classifier, fake_test_x, fake_test_y)
 
     # Train classifier on diffusion model generated data
-    print('Testing classifier trained on fake data')
+    print('Testing multi-class classifier trained on fake data')
     classifier = build_multiclass_classifier(fake_train_x, fake_train_y)
 
     print('Evaluating on real data')
