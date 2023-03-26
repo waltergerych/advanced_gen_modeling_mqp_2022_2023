@@ -7,8 +7,6 @@ import os
 import numpy as np
 import torch
 import pandas as pd
-import torch.nn.functional as F
-from torch.distributions import Categorical
 
 
 def make_beta_schedule(schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2):
@@ -154,7 +152,8 @@ def continuous_noise_estimation_loss(model, x_0_continuous, x_0_discrete, featur
     am1 = extract(one_minus_alphas_bar_sqrt, t, x_0_continuous)
     # Get noise for input
     e = torch.randn_like(x_0_continuous)
-    weights = torch.tensor([1/k]).repeat(k)
+    weights = torch.Tensor([1]) / k
+    weights = weights.repeat(k)
     c = torch.multinomial(weights, x_0_discrete.shape[0], replacement=True)
     c = torch.nn.functional.one_hot(c, k).float()
     # model input

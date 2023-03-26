@@ -166,7 +166,7 @@ def use_model(model, dataset, diffusion, t):
     return output
 
 
-def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size=128, lr=1e-3, training_time_steps=0, model=None, show_loss=False):
+def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size=128, optim_lr=1e-3, continuous_lr=2, training_time_steps=0, model=None, show_loss=False):
     """Applies reverse diffusion to a dataset
 
     Args:
@@ -197,7 +197,7 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
         hidden_size = 128
         model = ConditionalTabularModel(num_steps, hidden_size, continuous.shape[1], k)
 
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=optim_lr)
     # Create EMA model
     ema = EMA(0.9)
     ema.register(model)
@@ -206,10 +206,10 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
     loss_list, prob_list = [], []
 
     for t in range(training_time_steps):
-        multinomial_loss, continuous_loss = None, None
+        multinomial_loss, continuous_loss = 0, 0
         permutation_discrete = torch.randperm(discrete.shape[0])
         permutation_continuous = torch.randperm(continuous.shape[0])
-        for i in range(0, discrete.shape[0], batch_size):
+        for i in range(0, continuous.shape[0], batch_size):
             # Retrieve current batch
             indices_discrete = permutation_discrete[i:i+batch_size]
             indices_continuous = permutation_continuous[i:i+batch_size]
@@ -220,7 +220,7 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
             # Compute the loss
             multinomial_loss = utils.categorical_noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, diffusion, k, feature_indices)
             continuous_loss = utils.continuous_noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
-            loss = multinomial_loss + 2 * continuous_loss
+            loss = multinomial_loss + continuous_lr * continuous_loss
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()
             # Backward pass: compute gradient of the loss with respect to parameters

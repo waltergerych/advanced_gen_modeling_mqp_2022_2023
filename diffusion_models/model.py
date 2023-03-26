@@ -72,7 +72,15 @@ class ConditionalTabularModel(nn.Module):
         x = F.softplus(self.lin1(x, y))
         x = F.softplus(self.lin2(x, y))
         x = F.softplus(self.lin3(x, y))
+        # discrete
         x_d = self.lin_d(x)
+        results = []
+        for class_index in feature_indices:
+            start, end = class_index
+            curr_class = F.softmax(x_d[:, start:end], dim=1)
+            results.append(curr_class)
+        x_d = torch.cat(results, dim=1)
+        # continuous
         x_c = self.lin_c1(x)
         x_c = self.relu1(x_c)
         x_c = self.lin_c2(x_c)
@@ -81,12 +89,6 @@ class ConditionalTabularModel(nn.Module):
         x_c = self.relu3(x_c)
         x_c = self.lin_c4(x_c)
         x_c = self.lin_c5(x_c)
-        results = []
-        for class_index in feature_indices:
-            start, end = class_index
-            curr_class = F.softmax(x[:, start:end], dim=1)
-            results.append(curr_class)
-        x_d = torch.cat(results, dim=1)
         return x_c, x_d
 
 

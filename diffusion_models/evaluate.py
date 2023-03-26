@@ -40,10 +40,10 @@ def perform_pca(real, fake, title=None):
     labels = np.concatenate((np.ones(len(real)), np.zeros(len(fake))))
     data = torch.cat((real, fake), 0)
 
-    pca = PCA(n_components=2)
-    components = pca.fit_transform(data.detach().numpy())
-
     # PCA projection to 2D
+    pca = PCA(n_components=2)
+    pca.fit(real.detach().numpy())
+    components = pca.fit_transform(data.detach().numpy())
     pca_df = pd.DataFrame(data=components, columns=['PC1', 'PC2'])
 
     # Get df for just real data
@@ -119,6 +119,7 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, ov
 
     # Fit PCA on combined data
     pca = PCA(n_components=2)
+    pca.fit(real_data.detach().numpy())
     components = pca.fit_transform(data.detach().numpy())
 
     # Separate into real and fake classes again
