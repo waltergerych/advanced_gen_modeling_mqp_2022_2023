@@ -135,15 +135,17 @@ class CNNClassifier(nn.Module):
         
 
     def forward(self, input):
-        print(input.shape)
+        #print(input.shape)
         y = self.main(input)
-        print(y.shape)
+        #print(y.shape)
         y = self.lin1(y)
-        print(y.shape)
+        #print(y.shape)
         y = self.relu(y)
-        print(y.shape)
+        #print(y.shape)
         y = self.lin2(y)
-        print("final output: ", y.shape)
+        #print("final output: ", y.shape)
+        # predictions should be equal to (current) y.shape
+
         # y = self.softmax(y)
         # print(y.shape)
         # y = self.sig(y).squeeze(1)
@@ -251,15 +253,26 @@ def check_accuracy(test_loader: DataLoader, model: nn.Module, device):
 
     with torch.no_grad():
         for data, labels in test_loader:
-            data = data.to(device=device)
+            data = data.to(device=device) 
             labels = labels.to(device=device)
             print(f"Looking at: {labels}")
 
             predictions = model(data)
+            predictions = torch.softmax(predictions, dim=1)
+            # predictions should go through softmax
+            # what does the data looks like, if it looks like it came from the last layer, just call softmax
+            # if not, somethings up
+            # what layer did that output come from?
             print(f"Model predicted: {predictions}")
-            num_correct += (predictions == labels).sum()
+
+            # call argmax to find the guess (which class) and then calc acc
+            class_predictions = torch.add(torch.argmax(predictions, dim=1), 1)
+            num_correct += (class_predictions == labels).sum()
+            # impossible for it to be 0 
+            # so fix this 
             total += labels.size(0)
 
+        # do some numpy magic
         print(f"Test Accuracy of the model: {float(num_correct)/float(total)*100:.2f}")
 
 check_accuracy(test_loader, cnn, "cpu")
