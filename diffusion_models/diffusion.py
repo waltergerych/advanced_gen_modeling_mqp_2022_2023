@@ -166,7 +166,7 @@ def use_model(model, dataset, diffusion, t):
     return output
 
 
-def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size=128, optim_lr=1e-3, continuous_lr=2, training_time_steps=0, model=None, show_loss=False):
+def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size=128, optim_lr=1e-3, continuous_lr=2., training_time_steps=0, model=None, show_loss=False):
     """Applies reverse diffusion to a dataset
 
     Args:

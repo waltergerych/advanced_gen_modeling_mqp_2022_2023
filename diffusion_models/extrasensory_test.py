@@ -23,6 +23,7 @@ def main():
     NUM_STEPS = 1000             # Low for testing to speed up
     NUM_REVERSE_STEPS = 100    # ~Epochs
     LEARNING_RATE = .001
+    CONT_LR = 3
     BATCH_SIZE = 128
     HIDDEN_SIZE = 128
     diffusion = dfn.get_denoising_variables(NUM_STEPS)
@@ -59,12 +60,11 @@ def main():
     # declare model
     model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
     # model.load_state_dict(torch.load(f'./models/tabular_{NUM_STEPS}.pth'))
-    model, loss, probs = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, NUM_REVERSE_STEPS, model=model)
+    model, loss, probs = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, LEARNING_RATE, CONT_LR, NUM_REVERSE_STEPS, model=model)
     # torch.save(model.state_dict(), f'./models/tabular_{NUM_STEPS}.pth')
 
-    continuous_output, discrete_output, discrete_distribution = utils.get_tabular_model_output(model, k, num_samples, feature_indices, continuous.shape[1], diffusion, calculate_continuous=True)
-    print(discrete_output.shape)
-    print(discrete_distribution.shape)
+    continuous_output, _, discrete_distribution = utils.get_tabular_model_output(model, k, num_samples, feature_indices, continuous.shape[1], diffusion, calculate_continuous=True)
+    print(discrete_distribution)
     eval.separability(continuous, continuous_output, train_test_ratio=.7)
 
     x = range(NUM_REVERSE_STEPS)

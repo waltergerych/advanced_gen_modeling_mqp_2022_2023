@@ -16,6 +16,9 @@ def main():
     # set plot style
     hdr_plot_style()
 
+    # set training
+    set_train = False
+
     # load the datasets
     train_x, train_y = utils.load_data('../dataset/UCI_HAR_Dataset', 'train')
     test_x, test_y = utils.load_data('../dataset/UCI_HAR_Dataset', 'test')
@@ -23,12 +26,12 @@ def main():
     classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
     # define the number of features from the dataset to use. Must be 561 or less
-    NUM_FEATURES = 10
-    NUM_STEPS = 1000
-    NUM_REVERSE_STEPS = 20000
-    BATCH_SIZE = 256
+    NUM_FEATURES = 20
+    NUM_STEPS = 10000
+    NUM_REVERSE_STEPS = 30000
+    BATCH_SIZE = 128
     OPTIM_LR = .001
-    CONTINUOUS_LR = 10
+    CONTINUOUS_LR = 3
     HIDDEN_SIZE = 128
     NUM_SAMPLE = 1000
     TE_TR_RATIO = .3
@@ -67,26 +70,27 @@ def main():
 
     original_data, original_labels = combined_tr, train_y
 
-    for i in range(len(classes)):
-        dataset,_ = utils.get_activity_data(original_data, original_labels, i)
-        discrete = dataset[:,-1].unsqueeze(1)
-        continuous = dataset[:,:-1]
+    if set_train:
+        for i in range(0, len(classes)):
+            dataset,_ = utils.get_activity_data(original_data, original_labels, i)
+            discrete = dataset[:,-1].unsqueeze(1)
+            continuous = dataset[:,:-1]
 
-        # initialize forward diffusion
-        diffusion = dfn.get_denoising_variables(NUM_STEPS)
+            # initialize forward diffusion
+            diffusion = dfn.get_denoising_variables(NUM_STEPS)
 
-        print("Starting training for class " + str(classes[i]))
-        try:
-            model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
-            model.load_state_dict(torch.load(f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_{NUM_REVERSE_STEPS}.pth'))
-            model,_,_ = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, OPTIM_LR, CONTINUOUS_LR, NUM_REVERSE_STEPS, model=model)
-        except:
-            model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
-            model,_,_ = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, OPTIM_LR, CONTINUOUS_LR, NUM_REVERSE_STEPS, model=model)
+            print("Starting training for class " + str(classes[i]))
+            try:
+                model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
+                model.load_state_dict(torch.load(f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth'))
+                model,_,_ = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, OPTIM_LR, CONTINUOUS_LR, NUM_REVERSE_STEPS, model=model)
+            except:
+                model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
+                model,_,_ = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, OPTIM_LR, CONTINUOUS_LR, NUM_REVERSE_STEPS, model=model)
 
-        # save models
-        models.append(model)
-        torch.save(model.state_dict(), f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_{NUM_REVERSE_STEPS}.pth')
+            # save models
+            models.append(model)
+            torch.save(model.state_dict(), f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth')
 
     ##################
     ### EVALUATION ###
@@ -106,17 +110,17 @@ def main():
         # load trained diffusion model
         try:
             model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous_te.shape[1], k)
-            model.load_state_dict(torch.load(f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_{NUM_REVERSE_STEPS}.pth'))
+            model.load_state_dict(torch.load(f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth'))
         except:
             model = models[i]
 
         # get outputs of both models
+        print("Generating data for " + str(classes[i]))
         continuous_output, discrete_output,_ = utils.get_tabular_model_output(model, k, NUM_SAMPLE, feature_indices, continuous_te.shape[1], ddpm, calculate_continuous=True)
 
         # add model outputs and labels to lists
         diffusion_data.append(torch.cat((continuous_output, discrete_output), 1))
         diffusion_labels.append(torch.mul(torch.ones(NUM_SAMPLE), i))
-        print("Generated data for " + str(classes[i]))
 
     # concatenate data into single tensor
     diffusion_data, diffusion_labels = torch.cat(diffusion_data), torch.cat(diffusion_labels)
@@ -128,6 +132,9 @@ def main():
     for i in range(len(classes)):
         true_batch,_ = utils.get_activity_data(combined_te, test_y, i)
         fake_batch,_ = utils.get_activity_data(diffusion_data, diffusion_labels, i)
+        true_distribution, fake_distribution = utils.get_discrete_distribution_from_output(true_batch, fake_batch)
+        print(f'{classes[i]} true discrete distribution: {true_distribution}')
+        print(f'{classes[i]} fake discrete distribution: {fake_distribution}\n')
         eval.perform_pca(true_batch, fake_batch, f'{classes[i]}')
     plt.show()
 
