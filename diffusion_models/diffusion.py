@@ -1,6 +1,7 @@
 # Code from https://github.com/azad-academy/denoising-diffusion-model/blob/main/diffusion_model_demo.ipynb
 # Internal libraries
 import utils
+from early_stopper import EarlyStopper
 from ema import EMA
 from model import ConditionalTabularModel
 
@@ -166,12 +167,18 @@ def use_model(model, dataset, diffusion, t):
     return output
 
 
-def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, batch_size=128, optim_lr=1e-3, continuous_lr=2., training_time_steps=0, model=None, show_loss=False):
+def reverse_tabular_diffusion(discrete_tr, continuous_tr, discrete_vl, continuous_vl, diffusion, k, feature_indices,
+                              batch_size=128, optim_lr=1e-3,
+                              continuous_lr=2., training_time_steps=None,
+                              model=None, show_loss=True,
+                              es_patience=500, es_delta=0.3):
     """Applies reverse diffusion to a dataset
 
     Args:
-        discrete (torch.Tensor): the discrete features
-        continuous (torch.Tensor): the continuous features
+        discrete_tr (torch.Tensor): the discrete features for training
+        continuous_tr (torch.Tensor): the continuous features for training
+        discrete_vl (torch.Tensor): the discrete features for validation
+        continuous_vl (torch.Tensor): the continuous features for validation
         diffusion (Diffusion): a diffusion model class encapsulating proper constants for forward diffusion
         k (int): number of total classes across all features
         feature_indices (list<tuples>): a list of the indices for all the features
@@ -179,64 +186,136 @@ def reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indice
         lr (float): learning rate for the reverse diffusion
         training_time_steps (int): number of training steps to remove noise.  Default is step_size from diffusion class
         model (ConditionalModel): optional argument to train a previously defined model
+        show_loss (bool): default True, print loss statistics
+        es_patience (int): early stopping patience -- number of iterations where validation loss does not decrease before early stopping training
+        es_delta (float): early stopping delta -- minimum change in the validation loss to qualify as an improvement
 
     Returns:
         model (ConditionalModel): the trained model
+        loss_list (list<float>): the list of losses from the training
+        discrete_distribution_list (list<torch.Tensor>): the list of discrete distribution
     """
     # Load variables from diffusion class
-    loss = None
+    training_loss, validation_loss = None, None
     num_steps = diffusion.num_steps
     alphas_bar_sqrt = diffusion.alphas_bar_sqrt
     one_minus_alphas_bar_sqrt = diffusion.one_minus_alphas_bar_sqrt
 
-    if training_time_steps == 0:
+    if training_time_steps is None:
         training_time_steps = num_steps
 
     # If no model given, create new one
-    if model == None:
+    if model is None:
         hidden_size = 128
-        model = ConditionalTabularModel(num_steps, hidden_size, continuous.shape[1], k)
+        model = ConditionalTabularModel(num_steps, hidden_size, continuous_tr.shape[1], k)
 
     optimizer = optim.Adam(model.parameters(), lr=optim_lr)
+
     # Create EMA model
     ema = EMA(0.9)
     ema.register(model)
 
+    # Create an Early Stopper
+    es = EarlyStopper(patience=es_patience, min_delta=es_delta)
+
     # Only tracked for graphing loss afterwards
-    loss_list, prob_list = [], []
+    training_loss_list = []
+    validation_loss_list = []
+    discrete_distribution_list = []
 
     for t in range(training_time_steps):
-        multinomial_loss, continuous_loss = 0, 0
-        permutation_discrete = torch.randperm(discrete.shape[0])
-        permutation_continuous = torch.randperm(continuous.shape[0])
-        for i in range(0, continuous.shape[0], batch_size):
+        tr_multinomial_loss, tr_continuous_loss = 0, 0
+        vl_multinomial_loss, vl_continuous_loss = 0, 0
+        permutation_discrete = torch.randperm(discrete_tr.shape[0])
+        permutation_continuous = torch.randperm(continuous_tr.shape[0])
+        for i in range(0, continuous_tr.shape[0], batch_size):
+            # Put model in training mode
+            model.train()
             # Retrieve current batch
             indices_discrete = permutation_discrete[i:i+batch_size]
             indices_continuous = permutation_continuous[i:i+batch_size]
-            batch_x_discrete = discrete[indices_discrete]
-            batch_x_continuous = continuous[indices_continuous]
+            batch_x_discrete = discrete_tr[indices_discrete]
+            batch_x_continuous = continuous_tr[indices_continuous]
             # One hot encoding
             batch_x_discrete = utils.to_one_hot(batch_x_discrete, feature_indices)
             # Compute the loss
-            multinomial_loss = utils.categorical_noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, diffusion, k, feature_indices)
-            continuous_loss = utils.continuous_noise_estimation_loss(model, batch_x_continuous, batch_x_discrete, feature_indices, k, alphas_bar_sqrt, one_minus_alphas_bar_sqrt, num_steps)
-            loss = multinomial_loss + continuous_lr * continuous_loss
+            tr_multinomial_loss = utils.categorical_noise_estimation_loss(model,
+                                                                          batch_x_continuous,
+                                                                          batch_x_discrete,
+                                                                          diffusion,
+                                                                          k,
+                                                                          feature_indices)
+            tr_continuous_loss = utils.continuous_noise_estimation_loss(model,
+                                                                        batch_x_continuous,
+                                                                        batch_x_discrete,
+                                                                        feature_indices,
+                                                                        k,
+                                                                        alphas_bar_sqrt,
+                                                                        one_minus_alphas_bar_sqrt,
+                                                                        num_steps) * continuous_lr
+            training_loss = tr_multinomial_loss + tr_continuous_loss
             # Before the backward pass, zero all of the network gradients
             optimizer.zero_grad()
             # Backward pass: compute gradient of the loss with respect to parameters
-            loss.backward()
+            training_loss.backward()
             # Perform gradient clipping
             clip_grad.clip_grad_norm_(model.parameters(), 1.)
             # Calling the step function to update the parameters
             optimizer.step()
             # Update the exponential moving average
             ema.update(model)
-        # Print loss
-        _,_, discrete_distribution = utils.get_tabular_model_output(model, k, 1000, feature_indices, continuous.shape[1], diffusion, calculate_continuous=False)
-        prob_list.append(discrete_distribution.squeeze(0))
-        if loss:
-            if show_loss and multinomial_loss and continuous_loss:
-                print(f'Training Steps: {t}\tContinuous Loss: {round(continuous_loss.item(), 8)}\tDiscrete Loss: {round(multinomial_loss.item(), 8)}', end='\n')
-            loss_list.append(loss.item())
 
-    return model, loss_list, prob_list
+        # Put model in evaluation mode to get validation loss
+        model.eval()
+        # Compute validation loss
+        discrete_vl = utils.to_one_hot(discrete_vl, feature_indices)
+        vl_multinomial_loss = utils.categorical_noise_estimation_loss(model,
+                                                                      continuous_vl,
+                                                                      discrete_vl,
+                                                                      diffusion,
+                                                                      k,
+                                                                      feature_indices)
+        vl_continuous_loss = utils.continuous_noise_estimation_loss(model,
+                                                                    continuous_vl,
+                                                                    discrete_vl,
+                                                                    feature_indices,
+                                                                    k,
+                                                                    alphas_bar_sqrt,
+                                                                    one_minus_alphas_bar_sqrt,
+                                                                    num_steps) * continuous_lr
+        validation_loss = vl_multinomial_loss + vl_continuous_loss
+
+        # get discrete distribution
+        _,_, discrete_distribution = utils.get_tabular_model_output(model, k, 1000, feature_indices, continuous_tr.shape[1], diffusion, calculate_continuous=False)
+        discrete_distribution_list.append(discrete_distribution.squeeze(0))
+
+        # Add training loss statistics
+        if training_loss and validation_loss and tr_continuous_loss and tr_multinomial_loss and vl_continuous_loss and vl_multinomial_loss:
+            if show_loss and t % (training_time_steps // 10) == 0:
+                # Print losses statistics
+                print(f'Training Steps: {t}\n\t'
+                      f'Training Loss: {round(training_loss.item(), 8)}\t'
+                      f'Training Continuous Loss: {round(tr_continuous_loss.item(), 8)}\t'
+                      f'Training Discrete Loss: {round(tr_multinomial_loss.item(), 8)}\n\t'
+                      f'Validation Loss: {round(validation_loss.item(), 8)}\t'
+                      f'Validation Continuous Loss: {round(vl_continuous_loss.item(), 8)}\t'
+                      f'Validation Discrete Loss: {round(vl_multinomial_loss.item(), 8)}\n')
+
+            # Early stopping if validation loss no longer decreases
+            if es(validation_loss.item(), debug=True):
+                # Print losses statistics
+                print(f'Early Stopped at Training Step: {t}\n\t'
+                      f'Training Loss: {round(training_loss.item(), 8)}\t'
+                      f'Training Continuous Loss: {round(tr_continuous_loss.item(), 8)}\t'
+                      f'Training Discrete Loss: {round(tr_multinomial_loss.item(), 8)}\n\t'
+                      f'Validation Loss: {round(validation_loss.item(), 8)}\t'
+                      f'Validation Continuous Loss: {round(vl_continuous_loss.item(), 8)}\t'
+                      f'Validation Discrete Loss: {round(vl_multinomial_loss.item(), 8)}\n')
+                break
+
+            # Add losses to global lists
+            training_loss_list.append(training_loss.item())
+            validation_loss_list.append(validation_loss.item())
+
+
+    return model, training_loss_list, validation_loss_list, discrete_distribution_list

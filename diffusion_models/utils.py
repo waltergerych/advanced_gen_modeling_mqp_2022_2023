@@ -517,26 +517,3 @@ def separate_tabular_data(data, features):
     continuous = torch.index_select(data, 1, torch.tensor(continuous_indices))
 
     return continuous, discrete
-
-
-def get_discrete_distribution_from_output(real_data, fake_data):
-
-    """Get the discrete distribution from discrete output.
-    Currently only support a discrete feature with only 2 classes (0,1)
-
-    Args:
-        real_data (torch.Tensor): tensor of real data assuming the discrete feature is at the last index
-        fake_data (torch.Tensor): tensor of fake data assuming the discrete feature is at the last index
-
-    Returns:
-        real_distribution (list<tensor>): list of real data distribution for class 0 and 1
-        fake_distribution (list<tensor>): list of fake data distribution for class 0 and 1
-    """
-    real_ones = (real_data[:,-1] == 1).sum()
-    real_zeros = (real_data[:,-1] == 0).sum()
-    fake_ones = (fake_data[:,-1] == 1).sum()
-    fake_zeros = (fake_data[:,-1] == 0).sum()
-    real_distribution = [(real_ones/len(real_data[:,-1])), (real_zeros/len(real_data[:,-1]))]
-    fake_distribution = [(fake_ones/len(fake_data[:,-1])), (fake_zeros/len(fake_data[:,-1]))]
-
-    return real_distribution, fake_distribution

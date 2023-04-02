@@ -1,6 +1,7 @@
 # Native libraries
 import csv
 import os
+import warnings
 
 # Internal libraries
 import utils
@@ -24,7 +25,28 @@ HEATMAP_ALPHA = 0.4
 CLASSIFIER_DATA_PATH = "classifier_data"
 
 
-def perform_pca(real, fake, title=None):
+def recursive_pca(true_batch, fake_batch, contour_levels, title=None):
+    """Recursively try except pca plot when contour level error arises
+
+    Args:
+        original_data (torch.Tensor): real testing data
+        original_labels (torch.Tensor): real testing labels
+        diffusion_data (torch.Tensor): fake diffusion data
+        diffusion_labels (torch.Tensor): fake diffusion labels
+        classes (list<string>): list of classes
+        contour_levels (int): the number of contours wanted in the plot
+    """
+    if contour_levels == 0:
+        warnings.warn(f'ValueError: Contour levels reached limit at {contour_levels}')
+        return
+    try:
+        perform_pca(true_batch, fake_batch, contour_levels=contour_levels, title=title)
+
+    except ValueError:
+        recursive_pca(true_batch, fake_batch, contour_levels-10, title=title)
+
+
+def perform_pca(real, fake, contour_levels=100, title=None):
     """ Perform a principal component analysis (PCA) on the data and visualize on a 2D plane
 
     Args:
@@ -63,47 +85,75 @@ def perform_pca(real, fake, title=None):
     # Make top margin smaller on figure and add some padding between graphs
     fig.subplots_adjust(top = 0.9, hspace=0.3)
 
-    # PCA Graph (Upper left)
-    ax = fig.add_subplot(2, 2, 1)
-    ax.set_facecolor('white')
-    scatter = ax.scatter(pca_df['PC1'], pca_df['PC2'], c=labels, alpha=.8, marker='.')
-    ax.legend(handles=scatter.legend_elements()[0], labels=['Fake', 'Real'])
-    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-    ax.set_title(f'PCA for class {title}', fontsize=TITLE_FONT_SIZE)
-    # Get axis ranges
-    xmin, xmax = ax.get_xlim()
-    ymin, ymax = ax.get_ylim()
+    try:
+        # PCA Graph (Upper left)
+        ax = fig.add_subplot(2, 2, 1)
+        ax.set_facecolor('white')
+        scatter = ax.scatter(pca_df['PC1'], pca_df['PC2'], c=labels, alpha=.8, marker='.')
+        ax.legend(handles=scatter.legend_elements()[0], labels=['Fake', 'Real'])
+        ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+        ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+        ax.set_title(f'PCA for class {title}', fontsize=TITLE_FONT_SIZE)
+        # Get axis ranges
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
 
-    # Heatmap of PCA (Upper right)
-    ax = fig.add_subplot(2, 2, 2)
-    sns.kdeplot(data=pca_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
-    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-    ax.set_title(f'Heatmap for class {title}', fontsize=TITLE_FONT_SIZE)
-    ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
+        # Heatmap of PCA (Upper right)
+        ax = fig.add_subplot(2, 2, 2)
+        sns.kdeplot(data=pca_df, x='PC1', y='PC2', fill=True, thresh=0, levels=contour_levels, ax=ax, cmap="mako")
+        ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+        ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+        ax.set_title(f'Heatmap for class {title}', fontsize=TITLE_FONT_SIZE)
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
 
-    # Heatmap of just real data (Lower left)
-    ax = fig.add_subplot(2, 2, 3)
-    sns.kdeplot(data=real_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
-    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-    ax.set_title(f'Heatmap for real {title} data', fontsize=TITLE_FONT_SIZE)
-    ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
+        # Heatmap of just real data (Lower left)
+        ax = fig.add_subplot(2, 2, 3)
+        sns.kdeplot(data=real_df, x='PC1', y='PC2', fill=True, thresh=0, levels=contour_levels, ax=ax, cmap="mako")
+        ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+        ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+        ax.set_title(f'Heatmap for real {title} data', fontsize=TITLE_FONT_SIZE)
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
 
-    # Heatmap of just fake data (Lower right)
-    ax = fig.add_subplot(2, 2, 4)
-    sns.kdeplot(data=fake_df, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
-    ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-    ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-    ax.set_title(f'Heatmap for fake {title} data', fontsize=TITLE_FONT_SIZE)
-    ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
+        # Heatmap of just fake data (Lower right)
+        ax = fig.add_subplot(2, 2, 4)
+        sns.kdeplot(data=fake_df, x='PC1', y='PC2', fill=True, thresh=0, levels=contour_levels, ax=ax, cmap="mako")
+        ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+        ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+        ax.set_title(f'Heatmap for fake {title} data', fontsize=TITLE_FONT_SIZE)
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+
+    except:
+        plt.close(fig)
+        raise ValueError()
 
 
-def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, overlay_heatmap=True):
+
+def recursive_pca_with_classes(original_data, original_labels, diffusion_data, diffusion_labels, classes, contour_levels):
+    """Recursively try except pca plot with multiple classes when contour level error arises
+
+    Args:
+        original_data (torch.Tensor): real testing data
+        original_labels (torch.Tensor): real testing labels
+        diffusion_data (torch.Tensor): fake diffusion data
+        diffusion_labels (torch.Tensor): fake diffusion labels
+        classes (list<string>): list of classes
+        contour_levels (int): the number of contours wanted in the plot
+    """
+    if contour_levels == 0:
+        warnings.warn(f'ValueError: Contour levels reached limit at {contour_levels}')
+        return
+    try:
+        # do PCA analysis for fake/real and subclasses
+        pca_with_classes(original_data, original_labels, diffusion_data, diffusion_labels, classes, contour_levels=contour_levels, overlay_heatmap=True)
+
+    except ValueError:
+        recursive_pca_with_classes(original_data, original_labels, diffusion_data, diffusion_labels, classes, contour_levels//2)
+
+
+def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, contour_levels=100, overlay_heatmap=True):
     """ Perform a principal component analysis (PCA) on real and fake data and shows class subcategories
 
     Args:
@@ -133,65 +183,65 @@ def pca_with_classes(real_data, real_labels, fake_data, fake_labels, classes, ov
     # First figure, PCA plots
     fig = plt.figure(figsize=(16, 8))
 
-    # Real data PCA all classes (Upper left)
-    ax = fig.add_subplot(1, 2, 1)
-    ax.set_facecolor('white')
-    scatter = plt.scatter(real['PC1'], real['PC2'], c=real_labels, alpha=.8, marker='.')
-    ax.legend(handles=scatter.legend_elements()[0], labels=classes)
-    ax.set_xlabel("PC1")
-    ax.set_ylabel("PC2")
-    ax.set_title("PCA with Real Data")
-    # Get axis ranges
-    xmin, xmax = ax.get_xlim()
-    ymin, ymax = ax.get_ylim()
-
-    custom_xlim = (xmin, xmax)
-    custom_ylim = (ymin, ymax)
-
-    # Overlay heatmap
-    if overlay_heatmap: sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
-    # Change axis limits
-    plt.setp(ax, xlim=custom_xlim, ylim=custom_ylim)
-
-    # Fake data PCA all classes (Upper right)
-    ax = fig.add_subplot(1, 2, 2)
-    ax.set_facecolor('white')
-    scatter = plt.scatter(fake['PC1'], fake['PC2'], c=fake_labels, alpha=.8, marker='.')
-    ax.legend(handles=scatter.legend_elements()[0], labels=classes)
-    ax.set_xlabel("PC1")
-    ax.set_ylabel("PC2")
-    ax.set_title("PCA with Fake Data")
-
-    # Overlay heatmap
-    if overlay_heatmap: sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
-    # Change axis limits
-    plt.setp(ax, xlim=custom_xlim, ylim=custom_ylim)
-
-    plt.show()
-
-    if not overlay_heatmap:
-        # Second figure, heatmaps of PCA plots
-        fig = plt.figure(figsize=(16, 8))
-
-        # Heatmap for real PCA all classes (Lower left)
+    try:
+        # Real data PCA all classes (Upper left)
         ax = fig.add_subplot(1, 2, 1)
-        sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
-        ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-        ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-        ax.set_title(f'Heatmap for real data', fontsize=TITLE_FONT_SIZE)
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymin, ymax)
+        ax.set_facecolor('white')
+        scatter = plt.scatter(real['PC1'], real['PC2'], c=real_labels, alpha=.8, marker='.')
+        ax.legend(handles=scatter.legend_elements()[0], labels=classes)
+        ax.set_xlabel("PC1")
+        ax.set_ylabel("PC2")
+        ax.set_title("PCA with Real Data")
+        # Get axis ranges
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
 
-        # Heatmap for fake PCA all classes (Lower left)
+        custom_xlim = (xmin, xmax)
+        custom_ylim = (ymin, ymax)
+
+        # Overlay heatmap
+        if overlay_heatmap: sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=contour_levels, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
+        # Change axis limits
+        plt.setp(ax, xlim=custom_xlim, ylim=custom_ylim)
+
+        # Fake data PCA all classes (Upper right)
         ax = fig.add_subplot(1, 2, 2)
-        sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=100, ax=ax, cmap="mako")
-        ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
-        ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
-        ax.set_title(f'Heatmap for fake data', fontsize=TITLE_FONT_SIZE)
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymin, ymax)
+        ax.set_facecolor('white')
+        scatter = plt.scatter(fake['PC1'], fake['PC2'], c=fake_labels, alpha=.8, marker='.')
+        ax.legend(handles=scatter.legend_elements()[0], labels=classes)
+        ax.set_xlabel("PC1")
+        ax.set_ylabel("PC2")
+        ax.set_title("PCA with Fake Data")
 
-        plt.show()
+        # Overlay heatmap
+        if overlay_heatmap: sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=contour_levels, ax=ax, cmap="mako", alpha=HEATMAP_ALPHA)
+        # Change axis limits
+        plt.setp(ax, xlim=custom_xlim, ylim=custom_ylim)
+
+        if not overlay_heatmap:
+            # Second figure, heatmaps of PCA plots
+            fig = plt.figure(figsize=(16, 8))
+
+            # Heatmap for real PCA all classes (Lower left)
+            ax = fig.add_subplot(1, 2, 1)
+            sns.kdeplot(data=real, x='PC1', y='PC2', fill=True, thresh=0, levels=contour_levels, ax=ax, cmap="mako")
+            ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+            ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+            ax.set_title(f'Heatmap for real data', fontsize=TITLE_FONT_SIZE)
+            ax.set_xlim(xmin, xmax)
+            ax.set_ylim(ymin, ymax)
+
+            # Heatmap for fake PCA all classes (Lower left)
+            ax = fig.add_subplot(1, 2, 2)
+            sns.kdeplot(data=fake, x='PC1', y='PC2', fill=True, thresh=0, levels=contour_levels, ax=ax, cmap="mako")
+            ax.set_xlabel("PC1", fontsize=TITLE_FONT_SIZE)
+            ax.set_ylabel("PC2", fontsize=TITLE_FONT_SIZE)
+            ax.set_title(f'Heatmap for fake data', fontsize=TITLE_FONT_SIZE)
+            ax.set_xlim(xmin, xmax)
+            ax.set_ylim(ymin, ymax)
+    except:
+        plt.close(fig)
+        raise ValueError()
 
 
 def graph_two_features(real, fake, noise=None):
@@ -619,3 +669,35 @@ def multiclass_machine_evaluation(dataset, labels, fake, fake_labels, test_train
 
     print('Evaluating on fake data')
     test_multiclass_classifier(classifier, fake_test_x, fake_test_y)
+
+
+def plot_loss_and_discrete_distribution(title, training_loss, validation_loss, discrete_distribution):
+    """Plot the training/validation loss and the discrete distribution of the model
+
+    Args:
+        title (str): the title of the plot, namely the class name of the model trained
+        training_loss (list<list<float>>): the list of list of training losses from the model
+        validation_loss (list<list<float>>): the list of list of validation losses from the model
+        discrete_distribution (list<float>): the list of tensor for the discrete distribution for the features
+    """
+    # initialize subplots
+    fig = plt.figure(figsize=(12, 4))
+    fig.subplots_adjust(bottom=0.15, wspace=0.25)
+
+    # add loss graph
+    ax = fig.add_subplot(1, 2, 1)
+    ax.plot(range(len(training_loss)), training_loss)
+    ax.plot(range(len(validation_loss)), validation_loss)
+    ax.set_xlabel("loss", fontsize=TITLE_FONT_SIZE)
+    ax.set_ylabel("reverse steps", fontsize=TITLE_FONT_SIZE)
+    ax.set_title(f'{title} Loss', fontsize=TITLE_FONT_SIZE)
+    ax.legend(['Training loss', 'Validation loss'])
+
+    # add discrete distribution graph
+    class_discrete_distribution = torch.stack(discrete_distribution)
+    ax = fig.add_subplot(1, 2, 2)
+    ax.plot(range(len(class_discrete_distribution)), class_discrete_distribution)
+    ax.set_xlabel("distribution", fontsize=15)
+    ax.set_ylabel("reverse steps", fontsize=15)
+    ax.set_title(f'{title} Discrete Distribution', fontsize=15)
+    plt.legend(['f1/c1','f1/c2'])

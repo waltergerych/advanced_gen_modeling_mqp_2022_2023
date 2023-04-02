@@ -10,6 +10,7 @@ from model import ConditionalTabularModel
 import matplotlib.pyplot as plt
 import torch
 from sklearn.feature_selection import SelectKBest
+from sklearn.model_selection import train_test_split
 
 
 def main():
@@ -17,7 +18,7 @@ def main():
     hdr_plot_style()
 
     # set training
-    set_train = False
+    set_train = True
 
     # load the datasets
     train_x, train_y = utils.load_data('../dataset/UCI_HAR_Dataset', 'train')
@@ -26,13 +27,14 @@ def main():
     classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
     # define the number of features from the dataset to use. Must be 561 or less
-    NUM_FEATURES = 20
+    NUM_FEATURES = 15
     NUM_STEPS = 10000
-    NUM_REVERSE_STEPS = 30000
+    NUM_REVERSE_STEPS = 10000
     BATCH_SIZE = 128
     OPTIM_LR = .001
     CONTINUOUS_LR = 3
     HIDDEN_SIZE = 128
+    VALIDATION_RATIO = .2
     NUM_SAMPLE = 1000
     TE_TR_RATIO = .3
 
@@ -61,36 +63,83 @@ def main():
         feature_indices.append((k, k + num))
         k += num
 
+    # create validation test set
+    combined_te, combined_vl, test_y, validation_y = train_test_split(combined_te, test_y, test_size=VALIDATION_RATIO)
+
     ################
     ### TRAINING ###
     ################
 
     # makes diffusion model for each class for the Classifier
     models = []
+    training_loss_list = []
+    validation_loss_list = []
+    discrete_probs_list = []
 
-    original_data, original_labels = combined_tr, train_y
+    training_data, training_label = combined_tr, train_y
+    validation_data, validation_label = combined_vl, validation_y
 
     if set_train:
         for i in range(0, len(classes)):
-            dataset,_ = utils.get_activity_data(original_data, original_labels, i)
-            discrete = dataset[:,-1].unsqueeze(1)
-            continuous = dataset[:,:-1]
+            # get training data for each class
+            dataset_tr,_ = utils.get_activity_data(training_data, training_label, i)
+            discrete_tr = dataset_tr[:,-1].unsqueeze(1)
+            continuous_tr = dataset_tr[:,:-1]
+
+            # get validation data for each class
+            dataset_vl,_ = utils.get_activity_data(validation_data, validation_label, i)
+            discrete_vl = dataset_vl[:,-1].unsqueeze(1)
+            continuous_vl = dataset_vl[:,:-1]
 
             # initialize forward diffusion
             diffusion = dfn.get_denoising_variables(NUM_STEPS)
 
             print("Starting training for class " + str(classes[i]))
             try:
-                model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
+                model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous_tr.shape[1], k)
                 model.load_state_dict(torch.load(f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth'))
-                model,_,_ = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, OPTIM_LR, CONTINUOUS_LR, NUM_REVERSE_STEPS, model=model)
+                model, class_training_loss, class_validation_loss, probs = dfn.reverse_tabular_diffusion(discrete_tr,
+                                                                                                         continuous_tr,
+                                                                                                         discrete_vl,
+                                                                                                         continuous_vl,
+                                                                                                         diffusion,
+                                                                                                         k,
+                                                                                                         feature_indices,
+                                                                                                         BATCH_SIZE,
+                                                                                                         OPTIM_LR,
+                                                                                                         CONTINUOUS_LR,
+                                                                                                         NUM_REVERSE_STEPS,
+                                                                                                         model=model,
+                                                                                                         show_loss=True)
             except:
-                model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous.shape[1], k)
-                model,_,_ = dfn.reverse_tabular_diffusion(discrete, continuous, diffusion, k, feature_indices, BATCH_SIZE, OPTIM_LR, CONTINUOUS_LR, NUM_REVERSE_STEPS, model=model)
+                model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous_tr.shape[1], k)
+                model, class_training_loss, class_validation_loss, probs = dfn.reverse_tabular_diffusion(discrete_tr,
+                                                                                                         continuous_tr,
+                                                                                                         discrete_vl,
+                                                                                                         continuous_vl,
+                                                                                                         diffusion,
+                                                                                                         k,
+                                                                                                         feature_indices,
+                                                                                                         BATCH_SIZE,
+                                                                                                         OPTIM_LR,
+                                                                                                         CONTINUOUS_LR,
+                                                                                                         NUM_REVERSE_STEPS,
+                                                                                                         model=model,
+                                                                                                         show_loss=True)
+
+            # capture statistics
+            training_loss_list.append(class_training_loss)
+            validation_loss_list.append(class_validation_loss)
+            discrete_probs_list.append(probs)
 
             # save models
             models.append(model)
             torch.save(model.state_dict(), f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth')
+
+        # show each classes training/validation loss
+        for i in range(len(classes)):
+            eval.plot_loss_and_discrete_distribution(f'{classes[i]}', training_loss_list[i], validation_loss_list[i], discrete_probs_list[i])
+        plt.show()
 
     ##################
     ### EVALUATION ###
@@ -98,6 +147,8 @@ def main():
     # get real data set to be the same size as generated data set
     combined_te = combined_te[:NUM_SAMPLE*len(classes)]
     test_y = test_y[:NUM_SAMPLE*len(classes)]
+    discrete_te = combined_te[:,-1].unsqueeze(1)
+    continuous_te = combined_te[:,:-1]
 
     # get data for each class
     diffusion_data = []
@@ -125,17 +176,14 @@ def main():
     # concatenate data into single tensor
     diffusion_data, diffusion_labels = torch.cat(diffusion_data), torch.cat(diffusion_labels)
 
-    # do PCA analysis for fake/real and subclasses
-    eval.pca_with_classes(combined_te, test_y, diffusion_data, diffusion_labels, classes, overlay_heatmap=True)
+    # show PCA for all classes
+    eval.recursive_pca_with_classes(combined_te, test_y, diffusion_data, diffusion_labels, classes, 100)
 
     # show PCA for each class
     for i in range(len(classes)):
         true_batch,_ = utils.get_activity_data(combined_te, test_y, i)
         fake_batch,_ = utils.get_activity_data(diffusion_data, diffusion_labels, i)
-        true_distribution, fake_distribution = utils.get_discrete_distribution_from_output(true_batch, fake_batch)
-        print(f'{classes[i]} true discrete distribution: {true_distribution}')
-        print(f'{classes[i]} fake discrete distribution: {fake_distribution}\n')
-        eval.perform_pca(true_batch, fake_batch, f'{classes[i]}')
+        eval.recursive_pca(true_batch, fake_batch, 100, title=f'{classes[i]}')
     plt.show()
 
     # machine evaluation for diffusion and GAN data
