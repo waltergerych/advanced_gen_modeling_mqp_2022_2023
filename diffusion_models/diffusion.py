@@ -169,7 +169,8 @@ def use_model(model, dataset, diffusion, t):
 
 def reverse_tabular_diffusion(discrete_tr, continuous_tr, discrete_vl, continuous_vl, diffusion, k, feature_indices,
                               batch_size=128, optim_lr=1e-3,
-                              continuous_lr=2., training_time_steps=None,
+                              continuous_lr=1., discrete_lr=1.,
+                              training_time_steps=None,
                               model=None, show_loss=True,
                               es_patience=500, es_delta=0.3):
     """Applies reverse diffusion to a dataset
@@ -244,7 +245,7 @@ def reverse_tabular_diffusion(discrete_tr, continuous_tr, discrete_vl, continuou
                                                                           batch_x_discrete,
                                                                           diffusion,
                                                                           k,
-                                                                          feature_indices)
+                                                                          feature_indices) * discrete_lr
             tr_continuous_loss = utils.continuous_noise_estimation_loss(model,
                                                                         batch_x_continuous,
                                                                         batch_x_discrete,
@@ -274,7 +275,7 @@ def reverse_tabular_diffusion(discrete_tr, continuous_tr, discrete_vl, continuou
                                                                       discrete_vl,
                                                                       diffusion,
                                                                       k,
-                                                                      feature_indices)
+                                                                      feature_indices) * discrete_lr
         vl_continuous_loss = utils.continuous_noise_estimation_loss(model,
                                                                     continuous_vl,
                                                                     discrete_vl,

@@ -17,9 +17,6 @@ def main():
     # set plot style
     hdr_plot_style()
 
-    # set training
-    set_train = True
-
     # load the datasets
     train_x, train_y = utils.load_data('../dataset/UCI_HAR_Dataset', 'train')
     test_x, test_y = utils.load_data('../dataset/UCI_HAR_Dataset', 'test')
@@ -27,16 +24,22 @@ def main():
     classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
     # define the number of features from the dataset to use. Must be 561 or less
-    NUM_FEATURES = 15
+    NUM_FEATURES = 10
     NUM_STEPS = 10000
-    NUM_REVERSE_STEPS = 10000
+    NUM_REVERSE_STEPS = 20000
     BATCH_SIZE = 128
     OPTIM_LR = .001
-    CONTINUOUS_LR = 3
+    DISCRETE_LR = 0.2
+    CONTINUOUS_LR = 1
     HIDDEN_SIZE = 128
     VALIDATION_RATIO = .2
-    NUM_SAMPLE = 1000
+    NUM_SAMPLE = 300
     TE_TR_RATIO = .3
+
+    # QOL variables for ease of use
+    set_train = True
+    turing = False
+    model_path_name = lambda class_name: f'./diffusion_models/tabular_{class_name}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth'
 
     # use feature selection to select most important features
     feature_selector = SelectKBest(k=NUM_FEATURES)
@@ -97,7 +100,7 @@ def main():
             print("Starting training for class " + str(classes[i]))
             try:
                 model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous_tr.shape[1], k)
-                model.load_state_dict(torch.load(f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth'))
+                model.load_state_dict(torch.load(model_path_name(classes[i])))
                 model, class_training_loss, class_validation_loss, probs = dfn.reverse_tabular_diffusion(discrete_tr,
                                                                                                          continuous_tr,
                                                                                                          discrete_vl,
@@ -108,6 +111,7 @@ def main():
                                                                                                          BATCH_SIZE,
                                                                                                          OPTIM_LR,
                                                                                                          CONTINUOUS_LR,
+                                                                                                         DISCRETE_LR,
                                                                                                          NUM_REVERSE_STEPS,
                                                                                                          model=model,
                                                                                                          show_loss=True)
@@ -123,6 +127,7 @@ def main():
                                                                                                          BATCH_SIZE,
                                                                                                          OPTIM_LR,
                                                                                                          CONTINUOUS_LR,
+                                                                                                         DISCRETE_LR,
                                                                                                          NUM_REVERSE_STEPS,
                                                                                                          model=model,
                                                                                                          show_loss=True)
@@ -134,12 +139,15 @@ def main():
 
             # save models
             models.append(model)
-            torch.save(model.state_dict(), f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth')
+            torch.save(model.state_dict(), model_path_name(classes[i]))
 
         # show each classes training/validation loss
-        for i in range(len(classes)):
+        for i in range(0, len(classes)):
             eval.plot_loss_and_discrete_distribution(f'{classes[i]}', training_loss_list[i], validation_loss_list[i], discrete_probs_list[i])
-        plt.show()
+            if turing:
+                plt.savefig(f'./figures/{classes[i]}_loss_{NUM_FEATURES}f.png')
+        if not turing:
+            plt.show()
 
     ##################
     ### EVALUATION ###
@@ -161,7 +169,7 @@ def main():
         # load trained diffusion model
         try:
             model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous_te.shape[1], k)
-            model.load_state_dict(torch.load(f'./diffusion_models/tabular_{classes[i]}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth'))
+            model.load_state_dict(torch.load(model_path_name(classes[i])))
         except:
             model = models[i]
 
@@ -178,13 +186,18 @@ def main():
 
     # show PCA for all classes
     eval.recursive_pca_with_classes(combined_te, test_y, diffusion_data, diffusion_labels, classes, 100)
+    if turing:
+        plt.savefig(f'./figures/pca_{NUM_FEATURES}f.png')
 
     # show PCA for each class
     for i in range(len(classes)):
         true_batch,_ = utils.get_activity_data(combined_te, test_y, i)
         fake_batch,_ = utils.get_activity_data(diffusion_data, diffusion_labels, i)
         eval.recursive_pca(true_batch, fake_batch, 100, title=f'{classes[i]}')
-    plt.show()
+        if turing:
+            plt.savefig(f'./figures/{classes[i]}_pca_{NUM_FEATURES}f.png')
+    if not turing:
+        plt.show()
 
     # machine evaluation for diffusion and GAN data
     print('Testing data from diffusion model')
