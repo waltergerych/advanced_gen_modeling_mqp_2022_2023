@@ -24,9 +24,9 @@ def main():
     classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
     # define the number of features from the dataset to use. Must be 561 or less
-    NUM_FEATURES = 10
+    NUM_FEATURES = 20
     NUM_STEPS = 10000
-    NUM_REVERSE_STEPS = 20000
+    NUM_REVERSE_STEPS = 120000
     BATCH_SIZE = 128
     OPTIM_LR = .001
     DISCRETE_LR = 0.2
@@ -37,8 +37,8 @@ def main():
     TE_TR_RATIO = .3
 
     # QOL variables for ease of use
-    set_train = True
-    turing = False
+    set_train = False
+    turing = True
     model_path_name = lambda class_name: f'./diffusion_models/tabular_{class_name}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth'
 
     # use feature selection to select most important features
@@ -165,7 +165,7 @@ def main():
     # get denoising variables
     ddpm = dfn.get_denoising_variables(NUM_STEPS)
 
-    for i in range(len(classes)):
+    for i in range(0, len(classes)):
         # load trained diffusion model
         try:
             model = ConditionalTabularModel(NUM_STEPS, HIDDEN_SIZE, continuous_te.shape[1], k)
@@ -190,7 +190,7 @@ def main():
         plt.savefig(f'./figures/pca_{NUM_FEATURES}f.png')
 
     # show PCA for each class
-    for i in range(len(classes)):
+    for i in range(0, len(classes)):
         true_batch,_ = utils.get_activity_data(combined_te, test_y, i)
         fake_batch,_ = utils.get_activity_data(diffusion_data, diffusion_labels, i)
         eval.recursive_pca(true_batch, fake_batch, 100, title=f'{classes[i]}')
