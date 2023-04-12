@@ -21,8 +21,8 @@ from gan import *
 hdr_plot_style()
 
 # load the datasets
-train_x, train_y = load_data('../../dataset/UCI_HAR_Dataset', 'train')
-test_x, test_y = load_data('../../dataset/UCI_HAR_Dataset', 'test')
+train_x, train_y = load_data('../dataset/UCI_HAR_Dataset', 'train')
+test_x, test_y = load_data('../dataset/UCI_HAR_Dataset', 'test')
 
 classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
@@ -30,9 +30,9 @@ labels = train_y
 dataset = train_x
 
 # Define the number of features from the dataset to use. Must be 561 or less
-NUM_FEATURES = 40
+NUM_FEATURES = 15
 # Number of time steps
-NUM_STEPS = 500
+NUM_STEPS = 2000
 # Number of training steps to do in reverse diffusion (epochs)
 NUM_REVERSE_STEPS = 10000
 # Number of graphs to plot to show the addition of noise over time (not including X_0)
@@ -68,7 +68,7 @@ for i in range(len(classes)):
     models.append(model)
     diffusions.append(diffusion)
 
-    torch.save(model.state_dict(), f'./models/r{NUM_STEPS}_10K_model_best40_{i}.pth')
+    torch.save(model.state_dict(), f'./models/diffusion_{classes[i]}_{NUM_STEPS}.pth')
 
 ##################
 ### EVALUATION ###
@@ -102,15 +102,15 @@ ddpm = get_denoising_variables(NUM_STEPS)
 for i in range(len(classes)):
     # Load trained diffusion model
     model = ConditionalModel(NUM_STEPS, dataset.size(1))
-    model.load_state_dict(torch.load(f'./models/r{NUM_STEPS}_10K_model_best40_{i}.pth'))
+    model.load_state_dict(torch.load(f'./models/diffusion_{classes[i]}_{NUM_STEPS}.pth'))
 
     # Load trained GAN model
-    generator = Generator(generator_input_size, hidden_size, dataset.size(1))
-    generator.load_state_dict(torch.load(f'./gan/generator/G_{classes[i]}.pth'))
+    # generator = Generator(generator_input_size, hidden_size, dataset.size(1))
+    # generator.load_state_dict(torch.load(f'./gan/generator/G_{classes[i]}.pth'))
 
     # Get outputs of both models
     diffusion_output = get_model_output(model, input_size, ddpm, NUM_STEPS, num_to_gen)
-    gan_output = generate_data([generator], num_to_gen, generator_input_size)
+    # gan_output = generate_data([generator], num_to_gen, generator_input_size)
     
     # CODE TO GRAPH 10 PLOTS OF REMOVING NOISE FOR EACH CLASS 
     # --> MUST CHANGE 'get_model_output' to return x_seq rather than x_seq[-1]
@@ -123,23 +123,23 @@ for i in range(len(classes)):
     # Add model outputs and labels to lists
     diffusion_data.append(diffusion_output)
     diffusion_labels.append(torch.mul(torch.ones(num_to_gen), i))
-    gan_data.append(gan_output[0])
-    gan_labels.append(torch.mul(torch.ones(num_to_gen), i))
+    # gan_data.append(gan_output[0])
+    # gan_labels.append(torch.mul(torch.ones(num_to_gen), i))
     print("Generated data for " + str(classes[i]))
 
 # Concatenate data into single tensor
 diffusion_data, diffusion_labels = torch.cat(diffusion_data), torch.cat(diffusion_labels)
-gan_data, gan_labels = torch.cat(gan_data), torch.cat(gan_labels)
+# gan_data, gan_labels = torch.cat(gan_data), torch.cat(gan_labels)
 
 # Do PCA analysis for fake/real and subclasses
-pca_with_classes(dataset, labels, diffusion_data, diffusion_labels, classes, overlay_heatmap=True)
+# pca_with_classes(dataset, labels, diffusion_data, diffusion_labels, classes, overlay_heatmap=True)
 
 # # Show PCA for each class
-for i in range(len(classes)):
-    true_batch, true_labels = get_activity_data(dataset, labels, i)
-    fake_batch, fake_labels = get_activity_data(diffusion_data, diffusion_labels, i)
-    perform_pca(true_batch, fake_batch, f'{classes[i]}')
-plt.show()
+# for i in range(len(classes)):
+#     true_batch, true_labels = get_activity_data(dataset, labels, i)
+#     fake_batch, fake_labels = get_activity_data(diffusion_data, diffusion_labels, i)
+#     perform_pca(true_batch, fake_batch, f'{classes[i]}')
+# plt.show()
 
 # Machine evaluation for diffusion and GAN data
 print('Testing data from diffusion model')
@@ -147,8 +147,4 @@ binary_machine_evaluation(dataset, labels, diffusion_data, diffusion_labels, cla
 multiclass_machine_evaluation(dataset, labels, diffusion_data, diffusion_labels, test_train_ratio)
 separability(dataset, diffusion_data, test_train_ratio)
 
-print('Testing data from gan model')
-binary_machine_evaluation(dataset, labels, gan_data, gan_labels, classes, test_train_ratio)
-multiclass_machine_evaluation(dataset, labels, gan_data, gan_labels, test_train_ratio)
-separability(dataset, gan_data, test_train_ratio)
 
