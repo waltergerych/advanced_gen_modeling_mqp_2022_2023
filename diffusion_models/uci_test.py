@@ -1,4 +1,7 @@
 # Code from https://github.com/azad-academy/denoising-diffusion-model/blob/main/diffusion_model_demo.ipynb
+# Native libraries
+import os
+
 # Internal libraries
 import diffusion as dfn
 import evaluate as eval
@@ -8,6 +11,7 @@ from model import ConditionalTabularModel
 
 # External libraries
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from sklearn.feature_selection import SelectKBest
 from sklearn.model_selection import train_test_split
@@ -24,9 +28,9 @@ def main():
     classes = ['WALKING', 'U-STAIRS', 'D-STAIRS', 'SITTING', 'STANDING', 'LAYING']
 
     # define the number of features from the dataset to use. Must be 561 or less
-    NUM_FEATURES = 20
+    NUM_FEATURES = 15
     NUM_STEPS = 10000
-    NUM_REVERSE_STEPS = 120000
+    NUM_REVERSE_STEPS = 80000
     BATCH_SIZE = 128
     OPTIM_LR = .001
     DISCRETE_LR = 0.2
@@ -37,7 +41,7 @@ def main():
     TE_TR_RATIO = .3
 
     # QOL variables for ease of use
-    set_train = False
+    set_train = True
     turing = True
     model_path_name = lambda class_name: f'./diffusion_models/tabular_{class_name}_best{NUM_FEATURES}_forward{NUM_STEPS}_reverse{NUM_REVERSE_STEPS}.pth'
 
@@ -47,15 +51,13 @@ def main():
 
     # select k best features on train data
     train_data = torch.tensor(selection.transform(train_x))
-    discrete_tr = torch.where(train_data[:,0] > 0.25, 1, 0).unsqueeze(1)
-    continuous_tr = train_data[:,1:]
-    combined_tr = torch.cat((continuous_tr, discrete_tr), 1)
+    discrete_tr = torch.from_numpy(np.loadtxt(os.path.join('../dataset/UCI_HAR_Dataset', 'train', f"subject_train.txt")) - 1).unsqueeze(1).float()
+    combined_tr = torch.cat((train_data[:,:-1], discrete_tr), 1)
 
     # select k best features on test data
     test_data = torch.tensor(selection.transform(test_x))
-    discrete_te = torch.where(test_data[:,0] > 0.25, 1, 0).unsqueeze(1)
-    continuous_te = test_data[:,1:]
-    combined_te = torch.cat((continuous_te, discrete_te), 1)
+    discrete_te = torch.from_numpy(np.loadtxt(os.path.join('../dataset/UCI_HAR_Dataset', 'test', f"subject_test.txt")) - 1).unsqueeze(1).float()
+    combined_te = torch.cat((test_data[:,:-1], discrete_te), 1)
 
     # extract number of discrete features and number of classes in each discrete feature
     combined_discrete = torch.cat((discrete_tr, discrete_te), 0)
@@ -65,6 +67,13 @@ def main():
         num = utils.get_classes(combined_discrete[:, j]).shape[0]
         feature_indices.append((k, k + num))
         k += num
+
+    # generate training and testing data
+    combined_data = torch.cat((combined_tr, combined_te))
+    combined_label = torch.cat((train_y, test_y))
+
+    # create training/testing test set
+    combined_tr, combined_te, train_y, test_y = train_test_split(combined_data, combined_label, test_size=TE_TR_RATIO)
 
     # create validation test set
     combined_te, combined_vl, test_y, validation_y = train_test_split(combined_te, test_y, test_size=VALIDATION_RATIO)
@@ -145,7 +154,7 @@ def main():
         for i in range(0, len(classes)):
             eval.plot_loss_and_discrete_distribution(f'{classes[i]}', training_loss_list[i], validation_loss_list[i], discrete_probs_list[i])
             if turing:
-                plt.savefig(f'./figures/{classes[i]}_loss_{NUM_FEATURES}f.png')
+                plt.savefig(f'./figures/{classes[i]}_loss_{NUM_FEATURES}f_{NUM_REVERSE_STEPS}.png')
         if not turing:
             plt.show()
 
@@ -187,7 +196,7 @@ def main():
     # show PCA for all classes
     eval.recursive_pca_with_classes(combined_te, test_y, diffusion_data, diffusion_labels, classes, 100)
     if turing:
-        plt.savefig(f'./figures/pca_{NUM_FEATURES}f.png')
+        plt.savefig(f'./figures/pca_{NUM_FEATURES}f_{NUM_REVERSE_STEPS}.png')
 
     # show PCA for each class
     for i in range(0, len(classes)):
@@ -195,7 +204,7 @@ def main():
         fake_batch,_ = utils.get_activity_data(diffusion_data, diffusion_labels, i)
         eval.recursive_pca(true_batch, fake_batch, 100, title=f'{classes[i]}')
         if turing:
-            plt.savefig(f'./figures/{classes[i]}_pca_{NUM_FEATURES}f.png')
+            plt.savefig(f'./figures/{classes[i]}_pca_{NUM_FEATURES}f_{NUM_REVERSE_STEPS}.png')
     if not turing:
         plt.show()
 
