@@ -1,0 +1,167 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import precision_score, recall_score, f1_score
+import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
+import torchvision
+
+from torchvision.transforms import transforms
+
+# Batch size during training
+batch_size = 100
+
+# Load the data
+X = np.loadtxt('UCI_HAR_Dataset/train/X_train.txt')
+y = np.loadtxt('UCI_HAR_Dataset/train/y_train.txt')
+
+train_path = "GAF_RGB_Class_Images/train"
+test_path = "GAF_RGB_Class_Images/test"
+
+
+# Split the data into training and validation sets
+x_train, x_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+# Reshape the data
+# x_train = x_train.reshape(x_train.shape[0], x_train.shape[1], 1)
+# x_val = x_val.reshape(x_val.shape[0], x_val.shape[1], 1)
+
+# Number of channels in the training images. For color images this is 3
+nc = 3
+
+# Define the model architecture
+class CNNClassifier(nn.Module):
+    def __init__(self, input_shape, num_classes):
+        super(CNNClassifier, self).__init__()
+        self.conv1 = nn.Conv1d(in_channels=3, out_channels=64, kernel_size=3, padding=1)
+        self.pool1 = nn.MaxPool1d(kernel_size=2, stride=2)
+        self.conv2 = nn.Conv1d(in_channels=64, out_channels=32, kernel_size=3, padding=1)
+        self.pool2 = nn.MaxPool1d(kernel_size=2, stride=2)
+        self.fc1 = nn.Linear(1408, 128)
+        self.fc2 = nn.Linear(128, num_classes)
+
+    def forward(self, x):
+        # reshape the input tensor to have 3 channels and 492 elements
+        # x = x.view(-1, 3, 561)
+        x = self.pool1(torch.relu(self.conv1(x)))
+        x = self.pool2(torch.relu(self.conv2(x)))
+        x = x.view(-1, 17664)
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+# Define the input shape and number of classes
+print("xtrain ", x_train.shape)
+input_shape = (x_train.shape[0], x_train.shape[1], 3) # assumes 561 time steps with 1 feature
+print("input shape: ", input_shape)
+num_classes = 6
+
+# Create the model
+model = CNNClassifier(input_shape, num_classes)
+
+# Define the loss function and optimizer
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters())
+
+# Initialize lists for storing loss and accuracy values
+train_losses = []
+train_accs = []
+val_losses = []
+val_accs = []
+
+# Train the model
+for epoch in range(10):
+    running_loss = 0.0
+    running_acc = 0.0
+    for i in range(len(x_train)):
+        # Convert the data to PyTorch tensors and move them to the GPU if available
+        inputs = torch.from_numpy(x_train[i]).float().unsqueeze(0)
+        labels = torch.tensor(int(y_train[i]) - 1).long() # subtract 1 from the labels to make them 0-indexed
+
+        # Zero the parameter gradients
+        optimizer.zero_grad()
+
+        # Forward + backward + optimize
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        # Print statistics
+        running_loss += loss.item()
+        _, predicted = torch.max(outputs.data, 1)
+        running_acc += (predicted == labels).sum().item() / len(labels)
+        if i % 100 == 99:    # print every 100 mini-batches
+            print('[%d, %5d] loss: %.3f, acc: %.3f' % (epoch + 1, i + 1, running_loss / 100, running_acc / 100))
+            train_losses.append(running_loss / 100)
+            train_accs.append(running_acc / 100)
+            running_loss = 0.0
+            running_acc = 0.0
+
+    # Evaluate the model on the validation set
+    with torch.no_grad():
+        val_loss = 0.0
+        val_acc = 0.0
+        for i in range(len(x_val)):
+            # Convert the data to PyTorch tensors and move them to the GPU if available
+            inputs = torch.from_numpy(x_val[i]).float().unsqueeze(0)
+            labels = torch.tensor(int(y_val[i]) - 1).long() # subtract 1 from the labels to make them 0-indexed
+
+            # Forward pass
+            outputs = model(inputs)
+            val_loss += criterion(outputs, labels).item()
+            _, predicted = torch.max(outputs.data, 1)
+            val_acc += (predicted == labels).sum().item() / len(labels)
+
+        val_losses.append(val_loss / len(x_val))
+        val_accs.append(val_acc / len(x_val))
+        
+        # Calculate precision, recall, and F1 scores
+        y_true = y_val - 1
+        y_pred = np.argmax(model(torch.from_numpy(x_val).float()).detach().numpy(), axis=1)
+        precision = precision_score(y_true, y_pred, average='macro')
+        recall = recall_score(y_true, y_pred, average='macro')
+        f1 = f1_score(y_true, y_pred, average='macro')
+        print('epoch: %d, train loss: %.3f, train acc: %.3f, val loss: %.3f, val acc: %.3f, precision: %.3f, recall: %.3f, F1: %.3f' %
+              (epoch + 1, train_losses[-1], train_accs[-1], val_losses[-1], val_accs[-1], precision, recall, f1))
+        
+
+
+    # Plot the training and validation losses
+    plt.plot(train_losses, label='Training loss')
+    plt.plot(val_losses, label='Validation loss')
+    plt.legend()
+    plt.savefig('losses.png')
+    plt.close()
+
+    # Plot the training and validation accuracies
+    plt.plot(train_accs, label='Training accuracy')
+    plt.plot(val_accs, label='Validation accuracy')
+    plt.legend()
+    plt.savefig('accuracies.png')
+    plt.close()
+
+    # Plot the training and validation losses on separate graphs
+    plt.plot(train_losses, label='Training loss')
+    plt.legend()
+    plt.savefig('train_loss.png')
+    plt.close()
+
+    plt.plot(val_losses, label='Validation loss')
+    plt.legend()
+    plt.savefig('val_loss.png')
+    plt.close()
+
+    # Plot the training and validation accuracies on separate graphs
+    plt.plot(train_accs, label='Training accuracy')
+    plt.legend()
+    plt.savefig('train_accuracy.png')
+    plt.close()
+
+    plt.plot(val_accs, label='Validation accuracy')
+    plt.legend()
+    plt.savefig('val_accuracy.png')
+    plt.close()
