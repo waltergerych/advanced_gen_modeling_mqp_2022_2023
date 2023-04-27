@@ -1,0 +1,59 @@
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+import pandas as pd
+from sklearn.metrics import recall_score, precision_score, f1_score
+
+
+# Load the data
+X_tr = np.loadtxt('UCI_HAR_Dataset/train/X_train.txt')
+y_tr = np.loadtxt('UCI_HAR_Dataset/train/y_train.txt')
+
+
+# Split the data into training and validation sets
+X_train, X_val_train, y_train, y_val_train = train_test_split(X_tr, y_tr, test_size=0.2, random_state=42)
+
+# Load the data
+X_te = np.loadtxt('UCI_HAR_Dataset/test/X_test.txt')
+y_te = np.loadtxt('UCI_HAR_Dataset/test/y_test.txt')
+
+
+# Split the data into training and validation sets
+X_test, X_val_test, y_test, y_val_test = train_test_split(X_te, y_te, test_size=0.2, random_state=42)
+
+
+# Reshape the training and testing data into vectors
+X_train_vectors = X_train.reshape(-1, 561)
+X_test_vectors = X_test.reshape(-1, 561)
+
+# Train a forest model on the training data
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train_vectors, y_train)
+
+# Evaluate the model on the testing data
+y_pred = rf_model.predict(X_test_vectors)
+accuracy = accuracy_score(y_test, y_pred)
+print('Accuracy:', accuracy)
+
+# y_true contains the true labels
+# y_pred contains the predicted labels
+
+# # Calculate the recall
+# recall = recall_score(y_test, y_pred)
+
+# # Calculate the precision
+# precision = precision_score(y_test, y_pred)
+
+# # Print the recall and precision
+# print(f'Recall: {recall:.4f}')
+# print(f'Precision: {precision:.4f}')
+
+precision = precision_score(y_test, y_pred, average='macro', zero_division=1)
+recall = recall_score(y_test, y_pred, average='macro', zero_division=1)
+f1score = f1_score(y_test, y_pred, average='macro', zero_division=1)
+
+print("Precision:", precision)
+print("Recall:", recall)
+print("F1 Score:", f1score)
+
