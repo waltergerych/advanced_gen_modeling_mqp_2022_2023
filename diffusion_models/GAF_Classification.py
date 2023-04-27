@@ -1,11 +1,7 @@
-import matplotlib.pyplot as plt
 import numpy as np
-from helper_plot import hdr_plot_style
+from sklearn.metrics import precision_score, recall_score
 import torch
 import torch.optim as optim
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.feature_selection import SelectKBest
 import torch
 import torch.nn as nn
 import torchvision
@@ -15,16 +11,13 @@ from torch.autograd import Variable
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader
-import glob
 from PIL import Image
-import os
-import pickle
 from torch.utils.data import Dataset
 #from datasets import load_dataset
+from sklearn.metrics import precision_score, recall_score, f1_score
 import pathlib
 
 TRAIN = True
-
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -34,7 +27,6 @@ else:
 # Batch size during training
 batch_size = 512
 
-
 # Number of channels in the training images. For color images this is 3
 nc = 3
 
@@ -42,10 +34,10 @@ nc = 3
 ndf = 4
 
 # Number of training epochs
-num_epochs = 5
+num_epochs = 10
 
 # Learning rate for optimizers
-lr = 0.002
+lr = 0.001
 
 # Beta1 hyperparam for Adam optimizers
 # why 0.5???
@@ -62,22 +54,46 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 # we're working on this rn
-train_path = "diffusion_models/GAF_Classification/train"
-test_path = "diffusion_models/GAF_Classification/test"
+# make sure directory is the same on turing
+train_path = "GAF_RGB_Class_Images/train"
+test_path = "GAF_RGB_Class_Images/test"
 
-# this was for when the GAFs were NOT squares
-# train_transforms = transforms.Compose([
-#     transforms.ToTensor(),
-#     transforms.Resize(32, interpolation=torchvision.transforms.functional.InterpolationMode.BILINEAR),
-#     transforms.CenterCrop(32),
-#     # transforms.RandomHorizontalFlip(p=0.5)
-#     ])
 
-# test_transforms = transforms.Compose([
-#     transforms.ToTensor(),
-#     transforms.Resize(32, interpolation=torchvision.transforms.functional.InterpolationMode.BILINEAR),
-#     transforms.CenterCrop(32),
-#     ])
+def check_accuracy(test_loader: DataLoader, model: nn.Module, device):
+    num_correct = 0
+    total = 0
+    model.eval()
+
+    # Define empty arrays to store true labels and predicted labels
+    true_labels = []
+    predicted_labels = []
+
+    with torch.no_grad():
+        for data, labels in test_loader:
+            data = data.to(device=device) 
+            labels = labels.to(device=device)
+            # print(f"Looking at: {labels}")
+
+            predictions = model(data)
+            predictions = torch.softmax(predictions, dim=1)
+            
+            # print(f"Model predicted: {predictions}")
+
+            # call argmax to find the guess (which class) and then calc acc
+            class_predictions = torch.add(torch.argmax(predictions, dim=1), 1)
+            num_correct += (class_predictions == labels).sum()
+            total += labels.size(0)
+
+        precision = precision_score(labels, class_predictions, average='macro', zero_division=1)
+        recall = recall_score(labels, class_predictions, average='macro', zero_division=1)
+        f1score = f1_score(labels, class_predictions, average='macro', zero_division=1)
+        
+        print("Precision:", precision)
+        print("Recall:", recall)
+        print("F1 Score:", f1score)
+
+        print(f"Test Accuracy of the model: {float(num_correct)/float(total)*100:.2f}%")
+
 
 train_transforms = transforms.Compose([
     transforms.ToTensor(),
@@ -92,9 +108,6 @@ test_transforms = transforms.Compose([
 
 train_loader = DataLoader(torchvision.datasets.ImageFolder(train_path, transform=train_transforms), batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(torchvision.datasets.ImageFolder(test_path, transform=test_transforms), batch_size=batch_size, shuffle=True)
-
-# train_loader = DataLoader(torchvision.datasets.ImageFolder(train_path), batch_size=batch_size, shuffle=True)
-# test_loader = DataLoader(torchvision.datasets.ImageFolder(test_path), batch_size=batch_size, shuffle=True)
 
 # Get class names
 root = pathlib.Path(train_path)
@@ -113,7 +126,7 @@ class CNNClassifier(nn.Module):
             # state size. (ndf*2) x 16 x 16
             nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1),
             nn.BatchNorm2d(ndf * 4),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=True), 
             nn.Dropout(0.4),
             # state size. (ndf*4) x 8 x 8
             nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1),
@@ -122,33 +135,16 @@ class CNNClassifier(nn.Module):
             nn.Dropout(0.2),
             nn.Flatten()
         )
-        self.lin1 = nn.Linear(98304, 256)
+        self.lin1 = nn.Linear(73728, 256)
         self.relu = nn.LeakyReLU(0.2)
         self.lin2 = nn.Linear(256,6)
-        # self.sig = nn.Sigmoid()
-
-        # don't have to add in another activation function because linear is same shape as output of softmax
-        # self.softmax = torch.nn.Softmax(dim=1)
-
-        
-        # want loss function that assumes normalization 
-        
 
     def forward(self, input):
-        #print(input.shape)
-        y = self.main(input)
-        #print(y.shape)
-        y = self.lin1(y)
-        #print(y.shape)
-        y = self.relu(y)
-        #print(y.shape)
-        y = self.lin2(y)
-        #print("final output: ", y.shape)
-        # predictions should be equal to (current) y.shape
 
-        # y = self.softmax(y)
-        # print(y.shape)
-        # y = self.sig(y).squeeze(1)
+        y = self.main(input)
+        y = self.lin1(y)
+        y = self.relu(y)
+        y = self.lin2(y)
 
         return y
 
@@ -161,13 +157,6 @@ if TRAIN:
     #  to mean=0, stdev=0.2.
     cnn.apply(weights_init)
 
-    # Print the model
-    # print(cnn)
-
-
-    # Initialize BCELoss function
-    # criterion = nn.MSELoss()
-
     criterion = nn.CrossEntropyLoss()
     
 
@@ -178,15 +167,8 @@ if TRAIN:
 
     # Training Loop
 
-    # Lists to keep track of progress
     D_losses = []
     iters = 0
-
-    # for i, (data_x, data_y) in enumerate(train_loader, 0):
-    #     X = data_x.to(device)
-    #     Y = data_y.to(device)
-    #     print(X.shape)
-    #     print(Y.shape)
 
     print("Starting Training Loop...")
     # For each epoch
@@ -195,15 +177,15 @@ if TRAIN:
         for i, (data_x, data_y) in enumerate(train_loader, 0):
             
             # only need if running on turing
-            # X = data_x.to(device)
-            # Y = data_y.to(device)
+            X = data_x.to(device)
+            Y = data_y.to(device)
 
             optimizerD.zero_grad()
-            output = cnn(data_x)
+            output = cnn(X)
             # convert output to their respective classes
             
             # pred = torch.add(torch.argmax(output), 1)
-            loss = criterion(output, data_y)
+            loss = criterion(output, Y)
             loss.backward()
             optimizerD.step()
             
@@ -216,24 +198,21 @@ if TRAIN:
                 val_preds = []
                 val_labels = []
                 for _, (val_x, val_y) in enumerate(test_loader, 0):
-                    #val_X = val_x.to(device)
-                    #val_Y = val_y.to(device)
+                    val_X = val_x.to(device)
+                    val_Y = val_y.to(device)
                     with torch.no_grad():
-                        val_output = cnn(val_x)
+                        val_output = cnn(val_X)
                         # val_pred = np.argmax(val_output) + 1
                     
                     val_preds.append(val_output)
-                    val_labels.append(val_y)
+                    val_labels.append(val_Y)
                     
                 val_preds = torch.concat(val_preds)
                 val_labels =  torch.concat(val_labels)
                 
                 val_loss = criterion(val_preds, val_labels)
                 print(f'Test Cross-Entropy Loss: {val_loss}')
-                    
-                    
-                
-                print()
+                check_accuracy(test_loader, cnn, "cpu")               
 
             # Save Losses for plotting later
             D_losses.append(loss.item())
@@ -241,39 +220,23 @@ if TRAIN:
 
             iters += 1
 
-    torch.save(cnn.state_dict(), "diffusion_models/classifiers/GAF_Classifier_CrossEntropy.pth")
+    torch.save(cnn.state_dict(), "mqp_env/GAF_Classifier_CrossEntropy.pth")
 
 else:
-    cnn.load_state_dict(torch.load("diffusion_models/classifiers/GAF_Classifier_CrossEntropy.pth"))
+    cnn.load_state_dict(torch.load("mqp_env/GAF_Classifier_CrossEntropy.pth"))
 
-def check_accuracy(test_loader: DataLoader, model: nn.Module, device):
-    num_correct = 0
-    total = 0
-    model.eval()
+# Initialize a new instance of the CNNClassifier
+cnn_classifier = CNNClassifier()
 
-    with torch.no_grad():
-        for data, labels in test_loader:
-            data = data.to(device=device) 
-            labels = labels.to(device=device)
-            print(f"Looking at: {labels}")
+# Move the model to the device
+cnn_classifier.to(device)
 
-            predictions = model(data)
-            predictions = torch.softmax(predictions, dim=1)
-            # predictions should go through softmax
-            # what does the data looks like, if it looks like it came from the last layer, just call softmax
-            # if not, somethings up
-            # what layer did that output come from?
-            print(f"Model predicted: {predictions}")
+# Load the saved model weights if needed
+# cnn_classifier.load_state_dict(torch.load(saved_model_path))
 
-            # call argmax to find the guess (which class) and then calc acc
-            class_predictions = torch.add(torch.argmax(predictions, dim=1), 1)
-            num_correct += (class_predictions == labels).sum()
-            # impossible for it to be 0 
-            # so fix this 
-            total += labels.size(0)
-
-        # do some numpy magic
-        print(f"Test Accuracy of the model: {float(num_correct)/float(total)*100:.2f}")
+# Call the check_accuracy function and pass the test data loader and the device
+print("CNN!")
+check_accuracy(test_loader, cnn_classifier, device)
 
 check_accuracy(test_loader, cnn, "cpu")
 
